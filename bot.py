@@ -1491,11 +1491,6 @@ Stay wild and be decent! 🙏
         print("State set to ADMIN_REPLY_STATE")
         return ADMIN_REPLY_STATE
 
-@app.route('/webhook', methods=['POST'])
-async def webhook():
-    update = Update.de_json(request.get_json(force=True), application.bot)
-    await application.process_update(update)
-    return 'OK'
 
 def setup_credentials():
     """Check if credentials are set."""
