@@ -1536,7 +1536,8 @@ if __name__ == '__main__':
         import nest_asyncio
         nest_asyncio.apply()
         print("🔧 Applied nest_asyncio to handle event loop conflicts")
-        asyncio.run(main())
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(main())
     except ImportError:
         print("⚠️  nest_asyncio not available, trying alternative approach...")
         try:
