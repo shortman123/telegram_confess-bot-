@@ -186,7 +186,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data['comment_conf_id'] = conf_id
                 return ASK_COMMENT  # Need to define this state
             else:
-                await update.message.reply_text('❓ Confession not found.')
+                await update.message.reply_text('❓ Confession not found. Send /start to refresh!')
                 return
         except:
             await update.message.reply_text('❓ Invalid comment link.')
@@ -283,7 +283,7 @@ async def receive_confession(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conf_id = context.user_data.get('comment_conf_id')
     if not conf_id:
-        await update.message.reply_text('❓ No active comment session. Use /start to begin.')
+        await update.message.reply_text('❓ **No active comment session found** ❓\n\n🔄 **Please start fresh:**\nSend `/start` to begin commenting on confessions!\n\n💡 **This resets your session properly** ✨')
         return ConversationHandler.END
     
     comment_text = update.message.text.strip()
@@ -294,7 +294,7 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if confession exists
     approved = load_approved()
     if not any(conf['id'] == conf_id for conf in approved):
-        await update.message.reply_text('❓ Confession not found.')
+        await update.message.reply_text('❓ Confession not found. Send /start to refresh!')
         return ConversationHandler.END
     
     # Save comment
@@ -544,7 +544,7 @@ async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id not in ADMINS:
-        await update.message.reply_text('❌ Unauthorized!')
+        await update.message.reply_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
         return
     
     try:
@@ -604,7 +604,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
 async def reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id not in ADMINS:
-        await update.message.reply_text('❌ Unauthorized!')
+        await update.message.reply_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
         return
     
     try:
@@ -621,7 +621,7 @@ async def reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f'❌ Confession #{conf_id} rejected and removed. 🗑️')
             return
     
-    await update.message.reply_text('❓ Confession not found.')
+    await update.message.reply_text('❓ Confession not found. Send /start to refresh!')
 
 async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -637,7 +637,7 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if confession exists
     approved = load_approved()
     if not any(conf['id'] == conf_id for conf in approved):
-        await update.message.reply_text('❓ Confession not found.')
+        await update.message.reply_text('❓ Confession not found. Send /start to refresh!')
         return
     
     # Save comment
@@ -693,7 +693,7 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def view_comments(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id not in ADMINS:
-        await update.message.reply_text('❌ Unauthorized!')
+        await update.message.reply_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
         return
     
     try:
@@ -717,7 +717,7 @@ async def view_comments(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def approve_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id not in ADMINS:
-        await update.message.reply_text('❌ Unauthorized!')
+        await update.message.reply_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
         return
     
     try:
@@ -767,7 +767,7 @@ async def approve_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def reject_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id not in ADMINS:
-        await update.message.reply_text('❌ Unauthorized!')
+        await update.message.reply_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
         return
     
     try:
@@ -818,7 +818,7 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if confession exists
     approved = load_approved()
     if not any(conf['id'] == conf_id for conf in approved):
-        await update.message.reply_text('❓ Confession not found.')
+        await update.message.reply_text('❓ Confession not found. Send /start to refresh!')
         return
     
     # Notify admin
@@ -911,7 +911,7 @@ async def handle_admin_message(update: Update, context: ContextTypes.DEFAULT_TYP
                 )
                 editing_confession_id = None
                 return
-        await update.message.reply_text('❓ Confession not found for editing.')
+        await update.message.reply_text('❓ Confession not found for editing. Send /start to refresh!')
         editing_confession_id = None
 
 async def help_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1218,7 +1218,7 @@ Stay safe and be kind! 🙏
     elif query.data.startswith('approve_') or query.data.startswith('reject_') or query.data.startswith('edit_'):
         # Admin actions
         if query.from_user.id not in ADMINS:
-            await query.edit_message_text('❌ Unauthorized!')
+            await query.edit_message_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
             return
         
         parts = query.data.split('_')
@@ -1333,11 +1333,11 @@ Stay safe and be kind! 🙏
                     await query.edit_message_text(f'✏️ Editing confession #{conf_id}.\n\nCurrent text: "{conf["text"]}"\n\nReply with the corrected confession:')
                 return
         
-        await query.edit_message_text('❓ Confession not found.')
+        await query.edit_message_text('❓ Confession not found. Send /start to refresh!')
     elif query.data.startswith('approve_comment_') or query.data.startswith('reject_comment_'):
         # Admin comment actions
         if query.from_user.id not in ADMINS:
-            await query.edit_message_text('❌ Unauthorized!')
+            await query.edit_message_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
             return
         
         parts = query.data.split('_')
@@ -1502,7 +1502,7 @@ async def setup_handlers(application):
                 CommandHandler('start', start)  # Allow restart
             ],
         },
-        fallbacks=[CommandHandler('start', start)],
+        fallbacks=[CommandHandler('start', start), MessageHandler(filters.ALL, fallback_handler)],
         per_message=False
     )
     
@@ -1522,6 +1522,8 @@ async def setup_handlers(application):
     application.add_handler(CommandHandler('report', report))
     application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_message))
+    # Add error handler for better user experience
+    application.add_error_handler(error_handler)
 
 async def initialize_bot():
     """Initialize the bot application for Railway."""
@@ -1574,6 +1576,40 @@ async def initialize_bot():
     except Exception as e:
         print(f"❌ Failed to initialize bot: {e}")
         raise
+async def fallback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle unexpected messages and guide users to restart."""
+    await update.message.reply_text(
+        "🤖 **I'm not sure what you mean...** 🤖\n\n"
+        "🔄 **Let's start fresh!**\n"
+        "Send `/start` to begin a new conversation\n\n"
+        "💡 **This helps reset any confusion!** ✨"
+    )
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handle errors and guide users to restart."""
+    try:
+        # Log the error
+        print(f"❌ Error occurred: {context.error}")
+        
+        # Try to send a helpful message to the user
+        if update and update.effective_user:
+            error_message = (
+                "🤖 **Oops! Something went wrong with the bot** 🤖\n\n"
+                "🔄 **Please restart the conversation:**\n"
+                "Send `/start` to begin again\n\n"
+                "💡 **This usually fixes most issues!**\n\n"
+                "If problems persist, contact the admin."
+            )
+            
+            try:
+                if update.callback_query:
+                    await update.callback_query.message.reply_text(error_message)
+                elif update.message:
+                    await update.message.reply_text(error_message)
+            except Exception as e:
+                print(f"❌ Could not send error message: {e}")
+                
+    except Exception as e:
+        print(f"❌ Error in error handler: {e}")
 
 async def main():
     global application
