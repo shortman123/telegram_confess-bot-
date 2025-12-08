@@ -475,7 +475,7 @@ async def receive_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("Admin sending reply")
-    if str(update.message.from_user.id) not in ADMINS:
+    if update.message.from_user.id not in ADMINS:
         await update.message.reply_text('❌ This function is for admins only!')
         return ConversationHandler.END
     
@@ -527,7 +527,7 @@ async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE
     return ConversationHandler.END
 
 async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) not in ADMINS:
+    if update.message.from_user.id not in ADMINS:
         await update.message.reply_text('❌ Unauthorized access!')
         return
     
@@ -543,7 +543,7 @@ async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
 async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) not in ADMINS:
+    if update.message.from_user.id not in ADMINS:
         await update.message.reply_text('❌ Unauthorized!')
         return
     
@@ -603,7 +603,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
     
 async def reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) not in ADMINS:
+    if update.message.from_user.id not in ADMINS:
         await update.message.reply_text('❌ Unauthorized!')
         return
     
@@ -692,7 +692,7 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
 async def view_comments(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) not in ADMINS:
+    if update.message.from_user.id not in ADMINS:
         await update.message.reply_text('❌ Unauthorized!')
         return
     
@@ -716,7 +716,7 @@ async def view_comments(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
 async def approve_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) not in ADMINS:
+    if update.message.from_user.id not in ADMINS:
         await update.message.reply_text('❌ Unauthorized!')
         return
     
@@ -766,7 +766,7 @@ async def approve_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('❓ Comment not found or already approved.')
 
 async def reject_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) not in ADMINS:
+    if update.message.from_user.id not in ADMINS:
         await update.message.reply_text('❌ Unauthorized!')
         return
     
@@ -831,7 +831,7 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('✅ Report submitted. Thank you for helping keep the community safe! 🛡️')
 
 async def intro(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) not in ADMINS:
+    if update.message.from_user.id not in ADMINS:
         await update.message.reply_text('❌ This command is for admins only!')
         return
     
@@ -915,7 +915,7 @@ async def handle_admin_message(update: Update, context: ContextTypes.DEFAULT_TYP
         editing_confession_id = None
 
 async def help_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) not in ADMINS:
+    if update.message.from_user.id not in ADMINS:
         await update.message.reply_text('❌ This command is for admins only!')
         return
     
@@ -939,7 +939,7 @@ Example: Use /view_contacts and click Reply buttons to respond
     await update.message.reply_text(help_text)
 
 async def view_contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) not in ADMINS:
+    if update.message.from_user.id not in ADMINS:
         await update.message.reply_text('❌ This command is for admins only!')
         return
     
@@ -966,7 +966,7 @@ async def view_contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, reply_markup=reply_markup)
 
 async def reply_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) not in ADMINS:
+    if update.message.from_user.id not in ADMINS:
         await update.message.reply_text('❌ This command is for admins only!')
         return
     
@@ -1217,7 +1217,7 @@ Stay safe and be kind! 🙏
         return MAIN_MENU
     elif query.data.startswith('approve_') or query.data.startswith('reject_') or query.data.startswith('edit_'):
         # Admin actions
-        if str(query.from_user.id) not in ADMINS:
+        if query.from_user.id not in ADMINS:
             await query.edit_message_text('❌ Unauthorized!')
             return
         
@@ -1336,7 +1336,7 @@ Stay safe and be kind! 🙏
         await query.edit_message_text('❓ Confession not found.')
     elif query.data.startswith('approve_comment_') or query.data.startswith('reject_comment_'):
         # Admin comment actions
-        if str(query.from_user.id) not in ADMINS:
+        if query.from_user.id not in ADMINS:
             await query.edit_message_text('❌ Unauthorized!')
             return
         
@@ -1413,7 +1413,7 @@ Stay safe and be kind! 🙏
     elif query.data.startswith('reply_contact_'):
         # Admin reply to contact/feedback
         await query.answer()
-        if str(query.from_user.id) not in ADMINS:
+        if query.from_user.id not in ADMINS:
             return
         
         contact_id = int(query.data.split('_')[2])
