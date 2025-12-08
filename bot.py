@@ -1105,7 +1105,7 @@ All interactions are through buttons - no commands needed! 🎯
             # Truncate long confessions for preview
             preview = conf['text'][:100] + '...' if len(conf['text']) > 100 else conf['text']
             message_text += f'#{conf["id"]:03d}: {preview}\n\n'
-            keyboard.append([InlineKeyboardButton(f'💭 Comment on #{conf["id"]:03d}', callback_data=f'comment_on_{conf["id"]}')])
+            keyboard.append([InlineKeyboardButton(f'💬 View Comments #{conf["id"]:03d}', callback_data=f'view_comments_{conf["id"]}'), InlineKeyboardButton(f'💭 Comment on #{conf["id"]:03d}', callback_data=f'comment_on_{conf["id"]}')])
         
         keyboard.append([InlineKeyboardButton("⬅️ Back to Menu", callback_data='back_to_menu')])
         reply_markup = InlineKeyboardMarkup(keyboard)
