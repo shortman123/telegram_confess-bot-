@@ -131,17 +131,33 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             conf_id = int(context.args[0].split('_')[1])
             # Check if confession exists
             approved = load_approved()
-            if any(conf['id'] == conf_id for conf in approved):
-                await update.message.reply_text(
-                    f'💬 Comment on Confession #{conf_id:03d} 💬\n\n'
-                    'Please reply to this message with your anonymous comment.\n\n'
-                    'Example: This really helped me too!\n\n'
-                    'Your comment will be reviewed before posting.',
-                    reply_markup=ReplyKeyboardRemove()
-                )
-                # Set user state for comment
-                context.user_data['comment_conf_id'] = conf_id
-                return ASK_COMMENT  # Need to define this state
+            conf = next((c for c in approved if c['id'] == conf_id), None)
+            
+            if conf:
+                # Show the confession and its comments
+                comments = load_comments()
+                approved_comments = [c for c in comments if c['conf_id'] == conf_id and c['approved']]
+                
+                response_text = f'💫 Confession #{conf_id:03d} 💫\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"{conf["text"]}"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n'
+                
+                if approved_comments:
+                    response_text += f'💬 {len(approved_comments)} Comment{"s" if len(approved_comments) != 1 else ""} 💬\n\n'
+                    for i, comment in enumerate(approved_comments, 1):
+                        response_text += f'💭 Comment #{i}:\n"{comment["text"]}"\n\n'
+                else:
+                    response_text += '💬 No comments yet 💬\n\n'
+                
+                response_text += '✨ Your thoughts matter! ✨\n\nWhat would you like to do?'
+                
+                keyboard = [
+                    [InlineKeyboardButton("💝 Add My Comment", callback_data=f'add_comment_{conf_id}')],
+                    [InlineKeyboardButton("🔄 Refresh Comments", callback_data=f'view_comments_{conf_id}')],
+                    [InlineKeyboardButton("🏠 Back to Menu", callback_data='back_to_menu')]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                
+                await update.message.reply_text(response_text, reply_markup=reply_markup)
+                return MAIN_MENU
             else:
                 await update.message.reply_text('❓ Confession not found.')
                 return
@@ -271,9 +287,9 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '💬 **Thank You for Your Kindness!** 💬\n\n'
         '🙏 **Your supportive comment has been received**\n\n'
         '👀 Our admin will review it carefully\n'
-        '📢 Once approved, it will appear as a reply to help others\n\n'
+        '📢 Once approved, it will be visible to everyone who views this confession\n\n'
         '🌟 **Your empathy makes our community stronger**\n\n'
-        '💝 **Want to support more stories?** Visit our channel anytime\n\n'
+        '💝 **Want to see all comments?** Click the comment button again to refresh\n\n'
         '**Thank you for being part of the healing** ✨',
         reply_markup=ReplyKeyboardRemove()
     )
@@ -613,9 +629,9 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '💬 **Thank You for Your Kindness!** 💬\n\n'
         '🙏 **Your supportive comment has been received**\n\n'
         '👀 Our admin will review it carefully\n'
-        '📢 Once approved, it will appear as a reply to help others\n\n'
+        '📢 Once approved, it will be visible to everyone who views this confession\n\n'
         '🌟 **Your empathy makes our community stronger**\n\n'
-        '💝 **Want to support more stories?** Visit our channel anytime\n\n'
+        '💝 **Want to see all comments?** Use the comment button in the channel\n\n'
         '**Thank you for being part of the healing** ✨',
         reply_markup=ReplyKeyboardRemove()
     )
@@ -1170,6 +1186,78 @@ Stay safe and be kind! 🙏
             text=intro_text,
             reply_markup=reply_markup
         )
+        return MAIN_MENU
+    elif query.data.startswith('add_comment_'):
+        # User wants to add a comment to a specific confession
+        try:
+            conf_id = int(query.data.split('_')[2])
+        except (IndexError, ValueError):
+            await query.answer("Invalid confession ID")
+            return MAIN_MENU
+        
+        # Check if confession exists
+        approved = load_approved()
+        conf = next((c for c in approved if c['id'] == conf_id), None)
+        if not conf:
+            await query.answer("Confession not found")
+            return MAIN_MENU
+        
+        # Set up comment session
+        context.user_data['comment_conf_id'] = conf_id
+        
+        # Show confirmation and prompt for comment
+        keyboard = [[InlineKeyboardButton("⬅️ Cancel", callback_data=f'view_comments_{conf_id}')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        preview = conf['text'][:150] + '...' if len(conf['text']) > 150 else conf['text']
+        
+        await query.edit_message_text(
+            f'💬 Add Comment to Confession #{conf_id:03d} 💬\n\n'
+            f'📝 Confession: {preview}\n\n'
+            'Please reply to this message with your anonymous comment.\n\n'
+            'Example: This really helped me too!\n\n'
+            'Your comment will be reviewed before posting.',
+            reply_markup=reply_markup
+        )
+        return ASK_COMMENT
+    elif query.data.startswith('view_comments_'):
+        # User wants to view comments for a specific confession
+        try:
+            conf_id = int(query.data.split('_')[2])
+        except (IndexError, ValueError):
+            await query.answer("Invalid confession ID")
+            return MAIN_MENU
+        
+        # Check if confession exists
+        approved = load_approved()
+        conf = next((c for c in approved if c['id'] == conf_id), None)
+        if not conf:
+            await query.answer("Confession not found")
+            return MAIN_MENU
+        
+        # Show the confession and its comments
+        comments = load_comments()
+        approved_comments = [c for c in comments if c['conf_id'] == conf_id and c['approved']]
+        
+        response_text = f'💫 Confession #{conf_id:03d} 💫\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"{conf["text"]}"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n'
+        
+        if approved_comments:
+            response_text += f'💬 {len(approved_comments)} Comment{"s" if len(approved_comments) != 1 else ""} 💬\n\n'
+            for i, comment in enumerate(approved_comments, 1):
+                response_text += f'💭 Comment #{i}:\n"{comment["text"]}"\n\n'
+        else:
+            response_text += '💬 No comments yet 💬\n\n'
+        
+        response_text += '✨ Your thoughts matter! ✨\n\nWhat would you like to do?'
+        
+        keyboard = [
+            [InlineKeyboardButton("💝 Add My Comment", callback_data=f'add_comment_{conf_id}')],
+            [InlineKeyboardButton("🔄 Refresh Comments", callback_data=f'view_comments_{conf_id}')],
+            [InlineKeyboardButton("🏠 Back to Menu", callback_data='back_to_menu')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(response_text, reply_markup=reply_markup)
         return MAIN_MENU
     elif query.data.startswith('approve_') or query.data.startswith('reject_') or query.data.startswith('edit_'):
         # Admin actions
