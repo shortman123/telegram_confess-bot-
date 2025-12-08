@@ -24,8 +24,8 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 from flask import Flask, request
 
 BOT_TOKEN = '8579160095:AAH2e1Y0i3ZOUBfyY96jS2hcOUHn7Dtc_i8'
-CHANNEL_ID = '-1003491562982'
-ADMIN_ID = '6017750801'
+CHANNEL_ID = '-1003329619522'
+ADMINS = ['6017750801', '1163874634']  # List of admin user IDs
 BOT_USERNAME = 'Hopeconfession2_bot'  # Your bot's username without @
 WEBHOOK_URL = None
 
@@ -207,11 +207,12 @@ async def receive_confession(update: Update, context: ContextTypes.DEFAULT_TYPE)
         if user.language_code:
             user_info += f'\n🌐 {user.language_code.upper()}'
         
-        await context.bot.send_message(
-            chat_id=ADMIN_ID, 
-            text=f'📝 New Confession #{confession["id"]:03d} 📝\n\n{user_info}\n\n💌 Confession:\n{update.message.text}',
-            reply_markup=reply_markup
-        )
+        for admin in ADMINS:
+            await context.bot.send_message(
+                chat_id=admin, 
+                text=f'📝 New Confession #{confession["id"]:03d} 📝\n\n{user_info}\n\n💌 Confession:\n{update.message.text}',
+                reply_markup=reply_markup
+            )
     return ConversationHandler.END
 
 async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -380,15 +381,16 @@ async def receive_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("💬 Reply", callback_data=f'reply_contact_{contact["id"]}')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    try:
-        await context.bot.send_message(
-            chat_id=ADMIN_ID,
-            text=f'📞 New Contact Message 📞\n\n{user_info}\n\n💭 Message:\n{contact_text}\n\n📅 Status: Awaiting review',
-            reply_markup=reply_markup
-        )
-    except Exception as e:
-        print(f"Failed to send contact to admin: {e}")
-        # Still proceed, maybe admin hasn't started bot
+    for admin in ADMINS:
+        try:
+            await context.bot.send_message(
+                chat_id=admin,
+                text=f'📞 New Contact Message 📞\n\n{user_info}\n\n💭 Message:\n{contact_text}\n\n📅 Status: Awaiting review',
+                reply_markup=reply_markup
+            )
+        except Exception as e:
+            print(f"Failed to send contact to admin {admin}: {e}")
+            # Still proceed
     
     await update.message.reply_text(
         '✅ Message Sent Successfully! ✅\n\n'
@@ -406,7 +408,7 @@ async def receive_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("Admin sending reply")
-    if str(update.message.from_user.id) != ADMIN_ID:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ This function is for admins only!')
         return ConversationHandler.END
     
@@ -458,7 +460,7 @@ async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE
     return ConversationHandler.END
 
 async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) != ADMIN_ID:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ Unauthorized access!')
         return
     
@@ -490,18 +492,19 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Post to channel
             try:
                 if CHANNEL_ID:
-                    keyboard = [[InlineKeyboardButton("💭 Comment", url=f"https://t.me/{BOT_USERNAME}?start=comment_{conf_id}")]]
+                    approved = load_approved()
+                    new_id = len(approved) + 1
+                    keyboard = [[InlineKeyboardButton("💭 Comment", url=f"https://t.me/{BOT_USERNAME}?start=comment_{new_id}")]]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     message = await context.bot.send_message(
                         chat_id=CHANNEL_ID, 
-                        text=f'💫 Anonymous Confession #{conf_id:03d} 💫\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"{conf["text"]}"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+                        text=f'💫 Anonymous Confession #{new_id:03d} 💫\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"{conf["text"]}"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
                         reply_markup=reply_markup
                     )
                     message_id = message.message_id
                     # Save to approved
-                    approved = load_approved()
                     approved.append({
-                        'id': conf_id,
+                        'id': new_id,
                         'text': conf['text'],
                         'user_id': conf['user_id'],
                         'message_id': message_id,
@@ -513,7 +516,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     try:
                         await context.bot.send_message(
                             chat_id=conf['user_id'],
-                            text=f'🌟 **Your Confession Was Approved!** 🌟\n\nYour anonymous confession #{conf_id:03d} has been reviewed and approved!\n\nIt\'s now live in the channel and ready to help others. Thank you for sharing your story! 💝\n\n💭 Others can now comment and support you through the bot.'
+                            text=f'🌟 Your Confession Was Approved! 🌟\n\nYour anonymous confession #{new_id:03d} has been reviewed and approved!\n\nIt\'s now live in the channel and ready to help others. Thank you for sharing your story! 💝\n\n💭 Others can now comment and support you through the bot.'
                         )
                     except Exception as e:
                         # User might have blocked the bot or deleted their account
@@ -751,10 +754,11 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     # Notify admin
-    await context.bot.send_message(
-        chat_id=ADMIN_ID,
-        text=f'🚨 **Report Received** 🚨\n\nConfession #{conf_id:03d}\n👤 Reporter: {update.message.from_user.first_name}\n📝 Reason: {reason}'
-    )
+    for admin in ADMINS:
+        await context.bot.send_message(
+            chat_id=admin,
+            text=f'🚨 Report Received 🚨\n\nConfession #{conf_id:03d}\n👤 Reporter: {update.message.from_user.first_name}\n📝 Reason: {reason}'
+        )
     
     await update.message.reply_text('✅ Report submitted. Thank you for helping keep the community safe! 🛡️')
 
@@ -1341,7 +1345,7 @@ Stay safe and be kind! 🙏
     elif query.data.startswith('reply_contact_'):
         # Admin reply to contact/feedback
         await query.answer()
-        if str(query.from_user.id) != ADMIN_ID:
+        if str(query.from_user.id) not in ADMINS:
             return
         
         contact_id = int(query.data.split('_')[2])
