@@ -2,22 +2,37 @@
 
 This is a Telegram bot that collects anonymous confessions with admin moderation. Users send confessions, admin reviews them, and can approve/reject for posting to a channel. Features include commenting system, safety guidelines, feedback, and reporting tools for a safe community experience.
 
-## Channel Setup
+## 🚀 Railway Deployment (Recommended)
 
-To integrate with your Telegram channel:
+### 1. Fork/Clone this repository to Railway
 
-1. **Create a channel** or use existing one
-2. **Add your bot as admin**:
-   - Go to channel settings
-   - Add member: Search for your bot username
-   - Give admin rights with "Post messages" permission
-3. **Set CHANNEL_ID** in `.env`:
-   - For public channels: `@channelname`
-   - For private channels: The numeric ID (get from @userinfobot by forwarding a message)
+### 2. Set Environment Variables in Railway Dashboard
 
-The bot will post approved confessions to your channel anonymously!
+Go to your Railway project → Variables and add:
 
-## Running the Bot
+```
+BOT_TOKEN=your_bot_token_here
+CHANNEL_ID=your_channel_id_here
+BOT_USERNAME=your_bot_username_without_@
+ADMIN_IDS=admin_id_1,admin_id_2
+```
+
+### 3. Deploy
+
+Railway will automatically:
+- ✅ Install requirements from `requirements.txt`
+- ✅ Run the bot using webhooks (no polling)
+- ✅ Provide 24/7 uptime
+- ✅ Handle scaling automatically
+
+### 4. Set Webhook URL
+
+After deployment, Railway provides a `RAILWAY_STATIC_URL`. The bot automatically configures:
+```
+WEBHOOK_URL = RAILWAY_STATIC_URL + "/webhook"
+```
+
+## 🖥️ Local Development
 
 **Linux/Mac:**
 ```bash
@@ -28,6 +43,21 @@ python3 bot.py
 ```cmd
 python bot.py
 ```
+
+## 📺 Channel Setup
+
+To integrate with your Telegram channel:
+
+1. **Create a channel** or use existing one
+2. **Add your bot as admin**:
+   - Go to channel settings
+   - Add member: Search for your bot username
+   - Give admin rights with "Post messages" permission
+3. **Set CHANNEL_ID** in environment variables:
+   - For public channels: `@channelname`
+   - For private channels: The numeric ID (get from @userinfobot by forwarding a message)
+
+The bot will post approved confessions to your channel anonymously!
 or
 ```cmd
 py bot.py

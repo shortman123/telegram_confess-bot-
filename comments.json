@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "conf_id": 5,
+    "user_id": 6017750801,
+    "text": "yooo",
+    "approved": true,
+    "timestamp": "2025-12-08T15:20:39+00:00"
+  },
+  {
+    "id": 2,
+    "conf_id": 5,
+    "user_id": 1163874634,
+    "text": "u got her boy",
+    "approved": true,
+    "timestamp": "2025-12-08T15:22:06+00:00"
+  }
+]

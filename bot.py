@@ -23,14 +23,36 @@ from telegram import error as telegram_error
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
 from flask import Flask, request
 
-BOT_TOKEN = '8579160095:AAH2e1Y0i3ZOUBfyY96jS2hcOUHn7Dtc_i8'
-CHANNEL_ID = '-1003329619522'
-ADMINS = ['6017750801', '1163874634']  # List of admin user IDs
-BOT_USERNAME = 'Hopeconfession2_bot'  # Your bot's username without @
-WEBHOOK_URL = None
+# Configuration - Railway Environment Variables
+BOT_TOKEN = os.getenv('BOT_TOKEN', '8579160095:AAH2e1Y0i3ZOUBfyY96jS2hcOUHn7Dtc_i8')
+CHANNEL_ID = os.getenv('CHANNEL_ID', '-1003329619522')
+ADMIN_IDS = os.getenv('ADMIN_IDS', '6017750801,1163874634')  # Comma-separated admin IDs
+ADMINS = [id.strip() for id in ADMIN_IDS.split(',')] if ADMIN_IDS else ['6017750801', '1163874634']
+BOT_USERNAME = os.getenv('BOT_USERNAME', 'Hopeconfession2_bot')  # Your bot's username without @
+
+# Railway webhook configuration
+RAILWAY_STATIC_URL = os.getenv('RAILWAY_STATIC_URL')
+WEBHOOK_URL = f"{RAILWAY_STATIC_URL}/webhook" if RAILWAY_STATIC_URL else None
 
 app = Flask(__name__)
 application = None
+bot_initialized = False
+
+@app.before_request
+def initialize_bot_once():
+    global bot_initialized
+    if not bot_initialized and os.getenv('RAILWAY_STATIC_URL'):
+        print("🤖 Initializing bot for Railway...")
+        try:
+            # Create new event loop for bot initialization
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(initialize_bot())
+            bot_initialized = True
+            print("✅ Bot initialized successfully!")
+        except Exception as e:
+            print(f"❌ Failed to initialize bot: {e}")
+            raise
 
 PENDING_FILE = 'pending_confessions.json'
 APPROVED_FILE = 'approved_confessions.json'
@@ -190,7 +212,7 @@ async def receive_confession(update: Update, context: ContextTypes.DEFAULT_TYPE)
     )
     
     # Notify admin with more user intel and buttons
-    if ADMIN_ID:
+    if ADMINS:
         keyboard = [
             [InlineKeyboardButton("✅ Approve", callback_data=f'approve_{confession["id"]}'),
              InlineKeyboardButton("❌ Reject", callback_data=f'reject_{confession["id"]}')],
@@ -263,11 +285,12 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await context.bot.send_message(
-        chat_id=ADMIN_ID, 
-        text=f'💬 **New Comment on Confession #{conf_id:03d}** 💬\n\n💭 **Comment:**\n{comment_text}\n\n👤 **Comment ID:** {comment_id}',
-        reply_markup=reply_markup
-    )
+    for admin in ADMINS:
+        await context.bot.send_message(
+            chat_id=admin, 
+            text=f'💬 New Comment on Confession #{conf_id:03d} 💬\n\n💭 Comment:\n{comment_text}\n\n👤 Comment ID: {comment_id}',
+            reply_markup=reply_markup
+        )
     
     # Notify the confession sender
     conf = next((c for c in approved if c['id'] == conf_id), None)
@@ -322,11 +345,12 @@ async def receive_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [[InlineKeyboardButton("💬 Reply", callback_data=f'reply_contact_{contact["id"]}')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await context.bot.send_message(
-        chat_id=ADMIN_ID,
-        text=f'💬 **New Feedback** 💬\n\n{user_info}\n\n💭 **Feedback:**\n{feedback_text}\n\n📅 **Status:** Awaiting review',
-        reply_markup=reply_markup
-    )
+    for admin in ADMINS:
+        await context.bot.send_message(
+            chat_id=admin,
+            text=f'💬 New Feedback 💬\n\n{user_info}\n\n💭 Feedback:\n{feedback_text}\n\n📅 Status: Awaiting review',
+            reply_markup=reply_markup
+        )
     
     await update.message.reply_text(
         '✅ **Feedback Sent Successfully!** ✅\n\n'
@@ -476,7 +500,7 @@ async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
 async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) != ADMIN_ID:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ Unauthorized!')
         return
     
@@ -492,19 +516,18 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Post to channel
             try:
                 if CHANNEL_ID:
-                    approved = load_approved()
-                    new_id = len(approved) + 1
-                    keyboard = [[InlineKeyboardButton("💭 Comment", url=f"https://t.me/{BOT_USERNAME}?start=comment_{new_id}")]]
+                    keyboard = [[InlineKeyboardButton("💭 Comment", url=f"https://t.me/{BOT_USERNAME}?start=comment_{conf_id}")]]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     message = await context.bot.send_message(
                         chat_id=CHANNEL_ID, 
-                        text=f'💫 Anonymous Confession #{new_id:03d} 💫\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"{conf["text"]}"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
+                        text=f'💫 Anonymous Confession #{conf_id:03d} 💫\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"{conf["text"]}"\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
                         reply_markup=reply_markup
                     )
                     message_id = message.message_id
                     # Save to approved
+                    approved = load_approved()
                     approved.append({
-                        'id': new_id,
+                        'id': conf_id,
                         'text': conf['text'],
                         'user_id': conf['user_id'],
                         'message_id': message_id,
@@ -516,7 +539,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     try:
                         await context.bot.send_message(
                             chat_id=conf['user_id'],
-                            text=f'🌟 Your Confession Was Approved! 🌟\n\nYour anonymous confession #{new_id:03d} has been reviewed and approved!\n\nIt\'s now live in the channel and ready to help others. Thank you for sharing your story! 💝\n\n💭 Others can now comment and support you through the bot.'
+                            text=f'🌟 **Your Confession Was Approved!** 🌟\n\nYour anonymous confession #{conf_id:03d} has been reviewed and approved!\n\nIt\'s now live in the channel and ready to help others. Thank you for sharing your story! 💝\n\n💭 Others can now comment and support you through the bot.'
                         )
                     except Exception as e:
                         # User might have blocked the bot or deleted their account
@@ -536,7 +559,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
     
 async def reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) != ADMIN_ID:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ Unauthorized!')
         return
     
@@ -604,11 +627,12 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await context.bot.send_message(
-        chat_id=ADMIN_ID, 
-        text=f'💬 **New Comment on Confession #{conf_id:03d}** 💬\n\n💭 **Comment:**\n{comment_text}\n\n👤 **Comment ID:** {comment_id}',
-        reply_markup=reply_markup
-    )
+    for admin in ADMINS:
+        await context.bot.send_message(
+            chat_id=admin, 
+            text=f'💬 New Comment on Confession #{conf_id:03d} 💬\n\n💭 Comment:\n{comment_text}\n\n👤 Comment ID: {comment_id}',
+            reply_markup=reply_markup
+        )
     
     # Notify the confession sender
     approved = load_approved()
@@ -624,7 +648,7 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
 async def view_comments(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) != ADMIN_ID:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ Unauthorized!')
         return
     
@@ -648,7 +672,7 @@ async def view_comments(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
 async def approve_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) != ADMIN_ID:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ Unauthorized!')
         return
     
@@ -698,7 +722,7 @@ async def approve_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('❓ Comment not found or already approved.')
 
 async def reject_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) != ADMIN_ID:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ Unauthorized!')
         return
     
@@ -763,7 +787,7 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('✅ Report submitted. Thank you for helping keep the community safe! 🛡️')
 
 async def intro(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) != ADMIN_ID:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ This command is for admins only!')
         return
     
@@ -847,7 +871,7 @@ async def handle_admin_message(update: Update, context: ContextTypes.DEFAULT_TYP
         editing_confession_id = None
 
 async def help_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) != ADMIN_ID:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ This command is for admins only!')
         return
     
@@ -871,7 +895,7 @@ Example: Use /view_contacts and click Reply buttons to respond
     await update.message.reply_text(help_text)
 
 async def view_contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) != ADMIN_ID:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ This command is for admins only!')
         return
     
@@ -898,7 +922,7 @@ async def view_contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, reply_markup=reply_markup)
 
 async def reply_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if str(update.message.from_user.id) != ADMIN_ID:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ This command is for admins only!')
         return
     
@@ -1149,7 +1173,7 @@ Stay safe and be kind! 🙏
         return MAIN_MENU
     elif query.data.startswith('approve_') or query.data.startswith('reject_') or query.data.startswith('edit_'):
         # Admin actions
-        if str(query.from_user.id) != ADMIN_ID:
+        if str(query.from_user.id) not in ADMINS:
             await query.edit_message_text('❌ Unauthorized!')
             return
         
@@ -1268,7 +1292,7 @@ Stay safe and be kind! 🙏
         await query.edit_message_text('❓ Confession not found.')
     elif query.data.startswith('approve_comment_') or query.data.startswith('reject_comment_'):
         # Admin comment actions
-        if str(query.from_user.id) != ADMIN_ID:
+        if str(query.from_user.id) not in ADMINS:
             await query.edit_message_text('❌ Unauthorized!')
             return
         
@@ -1392,23 +1416,40 @@ async def webhook():
     await application.process_update(update)
     return 'OK'
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    return {'status': 'healthy', 'timestamp': str(asyncio.get_event_loop().time())}
+
+@app.route('/', methods=['GET'])
+def index():
+    return {'status': 'Telegram Bot is running', 'webhook_url': WEBHOOK_URL}
+
 def setup_credentials():
-    """Check if credentials are set (hardcoded)."""
-    if BOT_TOKEN and CHANNEL_ID and ADMIN_ID:
+    """Check if credentials are set."""
+    if BOT_TOKEN and CHANNEL_ID and ADMINS:
+        print("✅ Credentials configured:")
+        print(f"   🤖 Bot Token: {'*' * (len(BOT_TOKEN)-10) + BOT_TOKEN[-10:]}")
+        print(f"   📺 Channel ID: {CHANNEL_ID}")
+        print(f"   👥 Admins: {ADMINS}")
+        if WEBHOOK_URL:
+            print(f"   🌐 Webhook URL: {WEBHOOK_URL}")
         return True
     else:
-        print("Credentials not properly set. Please check the hardcoded values.")
+        print("❌ Credentials not properly set. Please check environment variables:")
+        print("   BOT_TOKEN, CHANNEL_ID, ADMIN_IDS")
         return False
 
-async def main():
+async def initialize_bot():
+    """Initialize the bot application for Railway."""
     global application
+
     if not setup_credentials():
-        return
-    
+        raise Exception("Credentials not configured")
+
     try:
         # Create application with custom request settings for better connectivity
         from telegram.request import HTTPXRequest
-        
+
         # Check for proxy settings
         proxy_url = os.getenv('HTTPS_PROXY') or os.getenv('HTTP_PROXY')
         if proxy_url:
@@ -1429,7 +1470,115 @@ async def main():
                 connect_timeout=10,
                 pool_timeout=10
             )
-        
+
+        application = Application.builder().token(BOT_TOKEN).request(request).build()
+        await application.initialize()
+        print("✅ Bot application created successfully!")
+
+        # Set up all handlers
+        # Conversation handler for confessions
+        conv_handler = ConversationHandler(
+            entry_points=[CommandHandler('start', start)],
+            states={
+                MAIN_MENU: [
+                    CallbackQueryHandler(button_callback),
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, handle_main_menu_message),
+                    CommandHandler('start', start)  # Allow restart
+                ],
+                ASK_CONFESSION: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, receive_confession),
+                    CommandHandler('start', start)  # Allow restart
+                ],
+                ASK_COMMENT: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, receive_comment),
+                    CommandHandler('start', start)  # Allow restart
+                ],
+                FEEDBACK_STATE: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, receive_feedback),
+                    CommandHandler('start', start)  # Allow restart
+                ],
+                CONTACT_STATE: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, receive_contact),
+                    CommandHandler('start', start)  # Allow restart
+                ],
+                ADMIN_REPLY_STATE: [
+                    MessageHandler(filters.TEXT & ~filters.COMMAND, receive_admin_reply),
+                    CommandHandler('start', start)  # Allow restart
+                ],
+            },
+            fallbacks=[CommandHandler('start', start)],
+            per_message=False
+        )
+
+        application.add_handler(conv_handler)
+        application.add_handler(CommandHandler('pending', pending))
+        application.add_handler(CommandHandler('approve', approve))
+        application.add_handler(CommandHandler('reject', reject))
+        application.add_handler(CommandHandler('comment', comment))
+        application.add_handler(CommandHandler('view_comments', view_comments))
+        application.add_handler(CommandHandler('approve_comment', approve_comment))
+        application.add_handler(CommandHandler('reject_comment', reject_comment))
+        application.add_handler(CommandHandler('view_contacts', view_contacts))
+        application.add_handler(CommandHandler('reply_contact', reply_contact))
+        application.add_handler(CommandHandler('help', help_admin))
+        application.add_handler(CommandHandler('intro', intro))
+        application.add_handler(CommandHandler('menu', menu))
+        application.add_handler(CommandHandler('report', report))
+        application.add_handler(CallbackQueryHandler(button_callback))
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_message))
+
+        # Start the bot with webhook
+        print("🚀 Starting bot webhook...")
+        await application.start()
+        await application.updater.start_webhook(
+            listen="0.0.0.0",
+            port=int(os.environ.get('PORT', 5000)),
+            url_path="webhook",
+            webhook_url=WEBHOOK_URL
+        )
+        print("✅ Bot webhook is now running!")
+
+    except telegram_error.TimedOut:
+        print("❌ Connection timeout! Please check your internet connection and try again.")
+        raise
+    except telegram_error.InvalidToken:
+        print("❌ Invalid bot token! Please check your BOT_TOKEN environment variable.")
+        raise
+    except Exception as e:
+        print(f"❌ Failed to initialize bot: {e}")
+        raise
+
+async def main():
+    """Main function for local development (polling mode)."""
+    global application
+    if not setup_credentials():
+        return
+
+    try:
+        # Create application with custom request settings for better connectivity
+        from telegram.request import HTTPXRequest
+
+        # Check for proxy settings
+        proxy_url = os.getenv('HTTPS_PROXY') or os.getenv('HTTP_PROXY')
+        if proxy_url:
+            print(f"🔗 Using proxy: {proxy_url}")
+            request = HTTPXRequest(
+                connection_pool_size=20,
+                read_timeout=30,
+                write_timeout=30,
+                connect_timeout=10,
+                pool_timeout=10,
+                proxy_url=proxy_url
+            )
+        else:
+            request = HTTPXRequest(
+                connection_pool_size=20,
+                read_timeout=30,
+                write_timeout=30,
+                connect_timeout=10,
+                pool_timeout=10
+            )
+
         application = Application.builder().token(BOT_TOKEN).request(request).build()
         await application.initialize()
         print("✅ Bot application created successfully!")
@@ -1476,7 +1625,7 @@ async def main():
         fallbacks=[CommandHandler('start', start)],
         per_message=False
     )
-    
+
     application.add_handler(conv_handler)
     application.add_handler(CommandHandler('pending', pending))
     application.add_handler(CommandHandler('approve', approve))
@@ -1493,59 +1642,47 @@ async def main():
     application.add_handler(CommandHandler('report', report))
     application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_message))
-    
-    if WEBHOOK_URL:
-        # Webhook mode - use manual event loop management
-        print("🚀 Starting bot webhook...")
-        await application.start()
-        await application.updater.start_webhook(
-            listen="0.0.0.0",
-            port=int(os.environ.get('PORT', 5000)),
-            url_path="webhook",
-            webhook_url=WEBHOOK_URL
-        )
-        print("✅ Bot webhook is now running! Press Ctrl+C to stop.")
-        try:
-            # Keep the bot running
-            while True:
-                await asyncio.sleep(1)
-        except KeyboardInterrupt:
-            print("\n🛑 Stopping bot...")
-            await application.updater.stop()
-            await application.stop()
-            print("✅ Bot stopped successfully!")
-    else:
-        # Polling mode - use manual event loop management
-        print("🚀 Starting bot polling...")
-        await application.start()
-        await application.updater.start_polling()
-        print("✅ Bot is now running! Press Ctrl+C to stop.")
-        try:
-            # Keep the bot running
-            while True:
-                await asyncio.sleep(1)
-        except KeyboardInterrupt:
-            print("\n🛑 Stopping bot...")
-            await application.updater.stop()
-            await application.stop()
-            print("✅ Bot stopped successfully!")
+
+    # Polling mode for local development
+    print("🚀 Starting bot polling...")
+    await application.start()
+    await application.updater.start_polling()
+    print("✅ Bot is now running! Press Ctrl+C to stop.")
+    try:
+        # Keep the bot running
+        while True:
+            await asyncio.sleep(1)
+    except KeyboardInterrupt:
+        print("\n🛑 Stopping bot...")
+        await application.updater.stop()
+        await application.stop()
+        print("✅ Bot stopped successfully!")
 
 if __name__ == '__main__':
-    # Handle event loop issues - try nest_asyncio if available
-    try:
-        import nest_asyncio
-        nest_asyncio.apply()
-        print("🔧 Applied nest_asyncio to handle event loop conflicts")
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(main())
-    except ImportError:
-        print("⚠️  nest_asyncio not available, trying alternative approach...")
+    # Check if we're on Railway (has RAILWAY_STATIC_URL)
+    if os.getenv('RAILWAY_STATIC_URL'):
+        print("🚂 Detected Railway environment!")
+        print(f"🌐 Webhook URL: {WEBHOOK_URL}")
+        print("🏃 Running Flask app for Railway...")
+
+        # For Railway, run the Flask app
+        app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False)
+    else:
+        print("💻 Local development mode")
+        # Handle event loop issues - try nest_asyncio if available
         try:
+            import nest_asyncio
+            nest_asyncio.apply()
+            print("🔧 Applied nest_asyncio to handle event loop conflicts")
             asyncio.run(main())
-        except RuntimeError as e:
-            if "event loop" in str(e).lower():
-                print("❌ Event loop conflict detected. Please run in a fresh environment:")
-                print("   ./beza/bin/python3 -c 'import bot; import asyncio; asyncio.run(bot.main())'")
-                print("   Or: source beza/bin/activate && python -c 'import bot; import asyncio; asyncio.run(bot.main())'")
-            else:
-                raise
+        except ImportError:
+            print("⚠️  nest_asyncio not available, trying alternative approach...")
+            try:
+                asyncio.run(main())
+            except RuntimeError as e:
+                if "event loop" in str(e).lower():
+                    print("❌ Event loop conflict detected. Please run in a fresh environment:")
+                    print("   ./beza/bin/python3 -c 'import bot; import asyncio; asyncio.run(bot.main())'")
+                    print("   Or: source beza/bin/activate && python -c 'import bot; import asyncio; asyncio.run(bot.main())'")
+                else:
+                    raise
