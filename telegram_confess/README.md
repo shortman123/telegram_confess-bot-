@@ -2,22 +2,37 @@
 
 This is a Telegram bot that collects anonymous confessions with admin moderation. Users send confessions, admin reviews them, and can approve/reject for posting to a channel. Features include commenting system, safety guidelines, feedback, and reporting tools for a safe community experience.
 
-## Channel Setup
+## 🚀 Railway Deployment (Recommended)
 
-To integrate with your Telegram channel:
+### 1. Fork/Clone this repository to Railway
 
-1. **Create a channel** or use existing one
-2. **Add your bot as admin**:
-   - Go to channel settings
-   - Add member: Search for your bot username
-   - Give admin rights with "Post messages" permission
-3. **Set CHANNEL_ID** in `.env`:
-   - For public channels: `@channelname`
-   - For private channels: The numeric ID (get from @userinfobot by forwarding a message)
+### 2. Set Environment Variables in Railway Dashboard
 
-The bot will post approved confessions to your channel anonymously!
+Go to your Railway project → Variables and add:
 
-## Running the Bot
+```
+BOT_TOKEN=your_bot_token_here
+CHANNEL_ID=your_channel_id_here
+BOT_USERNAME=your_bot_username_without_@
+ADMIN_IDS=admin_id_1,admin_id_2
+```
+
+### 3. Deploy
+
+Railway will automatically:
+- ✅ Install requirements from `requirements.txt`
+- ✅ Run the bot using webhooks (no polling)
+- ✅ Provide 24/7 uptime
+- ✅ Handle scaling automatically
+
+### 4. Set Webhook URL
+
+After deployment, Railway provides a `RAILWAY_STATIC_URL`. The bot automatically configures:
+```
+WEBHOOK_URL = RAILWAY_STATIC_URL + "/webhook"
+```
+
+## 🖥️ Local Development
 
 **Linux/Mac:**
 ```bash
@@ -28,6 +43,21 @@ python3 bot.py
 ```cmd
 python bot.py
 ```
+
+## 📺 Channel Setup
+
+To integrate with your Telegram channel:
+
+1. **Create a channel** or use existing one
+2. **Add your bot as admin**:
+   - Go to channel settings
+   - Add member: Search for your bot username
+   - Give admin rights with "Post messages" permission
+3. **Set CHANNEL_ID** in environment variables:
+   - For public channels: `@channelname`
+   - For private channels: The numeric ID (get from @userinfobot by forwarding a message)
+
+The bot will post approved confessions to your channel anonymously!
 or
 ```cmd
 py bot.py
@@ -169,43 +199,6 @@ Since you want the bot "hosted" like other bots, here are free/cheap options to 
 - Free tiers have limits, but enough for a small bot.
 
 This way, your bot is "hosted" by these services, not running on your local machine forever.
-
-## Railway Deployment 🚂
-
-For easy cloud deployment with 24/7 uptime:
-
-### 1. Create Railway Account
-- Go to [Railway.app](https://railway.app)
-- Sign up with GitHub
-
-### 2. Deploy from GitHub
-- Connect your GitHub repository
-- Railway will automatically detect Python app
-- Set environment variables in Railway dashboard:
-  ```
-  BOT_TOKEN=your_telegram_bot_token
-  CHANNEL_ID=your_channel_id
-  ADMIN_IDS=admin_id_1,admin_id_2
-  BOT_USERNAME=your_bot_username
-  ```
-
-### 3. Set Webhook (Important!)
-After deployment, Railway will provide a URL like `https://your-app-name.up.railway.app`
-
-Set the webhook by running locally:
-```bash
-curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://your-app-name.up.railway.app/webhook"
-```
-
-Or use the Railway CLI:
-```bash
-railway run curl "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=$(railway domain)/webhook"
-```
-
-### 4. Monitor Your Bot
-- Check Railway logs for bot status
-- Visit `https://your-app-name.up.railway.app/health` for health check
-- Bot will automatically handle webhook updates
 
 ## How it works
 
