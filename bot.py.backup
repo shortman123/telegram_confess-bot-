@@ -156,16 +156,6 @@ def get_next_confession_id():
     # Return the next sequential ID
     return max(max_pending_id, max_approved_id) + 1
 
-def get_next_comment_id():
-    """Get the next sequential comment ID (no gaps)."""
-    comments = load_comments()
-    
-    # Find the highest ID used so far
-    max_comment_id = max([comment.get(id, 0) for comment in comments], default=0)
-    
-    # Return the next sequential ID
-    return max_comment_id + 1
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f"User ID: {update.message.from_user.id}")
     # Handle deep link for commenting
@@ -299,13 +289,13 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Save comment
     comments = load_comments()
-    comment_id = get_next_comment_id()
+    comment_id = len(comments) + 1
     comments.append({
         'id': comment_id,
         'conf_id': conf_id,
         'user_id': update.message.from_user.id,
         'text': comment_text,
-        'approved': True,
+        'approved': False,
         'timestamp': update.message.date.isoformat()
     })
     save_comments(comments)
@@ -313,8 +303,8 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         '💬 **Thank You for Your Kindness!** 💬\n\n'
         '🙏 **Your supportive comment has been received**\n\n'
-        '✅ Your comment has been posted immediately\n'
-        '📢 Your comment is now visible to everyone!\n\n'
+        '👀 Our admin will review it carefully\n'
+        '📢 Once approved, it will appear as a reply to help others\n\n'
         '🌟 **Your empathy makes our community stronger**\n\n'
         '💝 **Want to support more stories?** Visit our channel anytime\n\n'
         '**Thank you for being part of the healing** ✨',
@@ -642,13 +632,13 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Save comment
     comments = load_comments()
-    comment_id = get_next_comment_id()
+    comment_id = len(comments) + 1
     comments.append({
         'id': comment_id,
         'conf_id': conf_id,
         'user_id': update.message.from_user.id,
         'text': comment_text,
-        'approved': True,
+        'approved': False,
         'timestamp': update.message.date.isoformat()
     })
     save_comments(comments)
@@ -656,8 +646,8 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         '💬 **Thank You for Your Kindness!** 💬\n\n'
         '🙏 **Your supportive comment has been received**\n\n'
-        '✅ Your comment has been posted immediately\n'
-        '📢 Your comment is now visible to everyone!\n\n'
+        '👀 Our admin will review it carefully\n'
+        '📢 Once approved, it will appear as a reply to help others\n\n'
         '🌟 **Your empathy makes our community stronger**\n\n'
         '💝 **Want to support more stories?** Visit our channel anytime\n\n'
         '**Thank you for being part of the healing** ✨',
