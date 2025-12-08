@@ -6,7 +6,7 @@ import os
 # Check if we're in the virtual environment
 venv_python = os.path.join(os.path.dirname(__file__), 'beza', 'bin', 'python3')
 if sys.executable != venv_python and os.path.exists(venv_python):
-    print("❌ Please run the bot with the virtual environment:")
+    print("❌ Yo, run this bot with the virtual environment:")
     print(f"   {venv_python} bot.py")
     print("   Or activate it first: source beza/bin/activate")
     sys.exit(1)
@@ -14,7 +14,7 @@ if sys.executable != venv_python and os.path.exists(venv_python):
 try:
     from telegram import Update
 except ImportError:
-    print("❌ Telegram library not found. Please install requirements:")
+    print("❌ Telegram shit not found. Install the requirements:")
     print("   pip install -r requirements.txt")
     sys.exit(1)
 import json
@@ -51,6 +51,11 @@ def initialize_bot_once():
             print(f"❌ Failed to initialize bot: {e}")
             raise
 
+@app.route('/webhook', methods=['POST'])
+async def webhook():
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    await application.process_update(update)
+    return 'OK'
 
 @app.route('/health', methods=['GET'])
 def health_check():
@@ -71,7 +76,7 @@ def setup_credentials():
             print(f"   🌐 Webhook URL: {WEBHOOK_URL}")
         return True
     else:
-        print("❌ Credentials not properly set. Please check environment variables:")
+        print("❌ Your credentials are fucked. Check the environment variables:")
         print("   BOT_TOKEN, CHANNEL_ID, ADMIN_IDS")
         return False
 
@@ -156,16 +161,6 @@ def get_next_confession_id():
     # Return the next sequential ID
     return max(max_pending_id, max_approved_id) + 1
 
-def get_next_comment_id():
-    """Get the next sequential comment ID (no gaps)."""
-    comments = load_comments()
-    
-    # Find the highest ID used so far
-    max_comment_id = max([comment.get(id, 0) for comment in comments], default=0)
-    
-    # Return the next sequential ID
-    return max_comment_id + 1
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f"User ID: {update.message.from_user.id}")
     # Handle deep link for commenting
@@ -177,7 +172,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if any(conf['id'] == conf_id for conf in approved):
                 await update.message.reply_text(
                     f'💬 Comment on Confession #{conf_id:03d} 💬\n\n'
-                    'Please reply to this message with your anonymous comment.\n\n'
+                    'Drop your anonymous comment below.\n\n'
                     'Example: This really helped me too!\n\n'
                     'Your comment will be reviewed before posting.',
                     reply_markup=ReplyKeyboardRemove()
@@ -186,37 +181,37 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data['comment_conf_id'] = conf_id
                 return ASK_COMMENT  # Need to define this state
             else:
-                await update.message.reply_text('❓ Confession not found. Send /start to refresh!')
+                await update.message.reply_text('❓ Confession not found.')
                 return
         except:
-            await update.message.reply_text('❓ Invalid comment link.')
+            await update.message.reply_text('❓ This comment link is fucked up.')
             return
     
     keyboard = [
-        [InlineKeyboardButton("📝 Share My Story", callback_data='send_confession'),
-         InlineKeyboardButton("💬 Support Others", callback_data='comment_help')],
-        [InlineKeyboardButton("🌟 About Our Community", callback_data='about'),
-         InlineKeyboardButton("🛡️ Safety First", callback_data='safety')],
-        [InlineKeyboardButton("❓ How It Works", callback_data='help_user')]
+        [InlineKeyboardButton("📝 Unleash My Chaos", callback_data='send_confession'),
+         InlineKeyboardButton("💬 Join the Chaos", callback_data='comment_help')],
+        [InlineKeyboardButton("🌟 Our Wild Story", callback_data='about'),
+         InlineKeyboardButton("🛡️ Chaos Rules", callback_data='safety')],
+        [InlineKeyboardButton("❓ How to Go Wild", callback_data='help_user')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     intro_text = """
 🎭 Welcome to Hope Confessions 🎭
 
-✨ A Safe Space for Your Heart ✨
+✨ A Wild Place for Your Crazy Stories ✨
 
-💝 Share anonymously, heal together, grow stronger
+💥 Spill your guts anonymously, no judgment here!
 
-🌈 Why people choose us:
-• 🙈 100% Anonymous - Your identity stays private
-• 👥 Supportive Community - Connect with understanding hearts  
-• 🛡️ Safe Environment - All content is carefully reviewed
-• 💪 Empowerment - Your story can inspire others
+🌈 Why people love us:
+• 🙈 100% Anonymous - Your secrets stay locked up tight
+• 👥 Crazy Community - Connect with fellow weirdos  
+• 🛡️ Safety-ish - We check stuff but don't be a total jerk
+• 💪 Raw Energy - Your story might blow minds
 
-📊 Join 1000+ people who've found courage here
+📊 Join 1000+ people who've gone full wild here
 
-🎯 Ready to begin your journey?
+🎯 Ready to unleash your inner chaos?
 """
     await update.message.reply_text(intro_text, reply_markup=reply_markup)
     return MAIN_MENU
@@ -241,16 +236,16 @@ async def receive_confession(update: Update, context: ContextTypes.DEFAULT_TYPE)
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await update.message.reply_text(
-        'Thank You for Trusting Us 🙏✨\n\n'
-        'Your courage is beautiful 💝\n\n'
-        'Your story is now in safe hands\n'
-        '👀 Our compassionate admin will read it with care\n'
-        '📢 When approved, it will touch hearts anonymously\n\n'
-        'You\'ve taken a powerful step - healing begins here 🌱\n\n'
-        'Want to share another chapter? Send another message anytime\n'
-        'Need to return? Click the button below\n\n'
-        'Remember: You\'re stronger than you know 💪❤️\n\n'
-        'Your vulnerability inspires hope in others 🌈',
+        'Holy Shit, Thanks for Trusting Us! 🙏💥\n\n'
+        'Your courage is fucking amazing 💝\n\n'
+        'Your story is now in our wild hands\n'
+        '👀 Our admin will read it with zero fucks given\n'
+        '📢 When approved, it will blow minds anonymously\n\n'
+        'You\'ve unleashed some serious chaos - the fun begins here 🌱\n\n'
+        'Want to spill more guts? Send another message anytime\n'
+        'Need to bail? Click the button below\n\n'
+        'Remember: You\'re wilder than you know 💪❤️\n\n'
+        'Your vulnerability is pure fire in others 🌈',
         reply_markup=reply_markup
     )
     
@@ -283,41 +278,41 @@ async def receive_confession(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conf_id = context.user_data.get('comment_conf_id')
     if not conf_id:
-        await update.message.reply_text('❓ **No active comment session found** ❓\n\n🔄 **Please start fresh:**\nSend `/start` to begin commenting on confessions!\n\n💡 **This resets your session properly** ✨')
+        await update.message.reply_text('❓ No active comment session. Use /start to begin.')
         return ConversationHandler.END
     
     comment_text = update.message.text.strip()
     if not comment_text:
-        await update.message.reply_text('📝 Please provide a comment. Try again or use /start to cancel.')
+        await update.message.reply_text('Drop a comment already. Try again or use /start to cancel.')
         return ASK_COMMENT
     
     # Check if confession exists
     approved = load_approved()
     if not any(conf['id'] == conf_id for conf in approved):
-        await update.message.reply_text('❓ Confession not found. Send /start to refresh!')
+        await update.message.reply_text('❓ Confession not found.')
         return ConversationHandler.END
     
     # Save comment
     comments = load_comments()
-    comment_id = get_next_comment_id()
+    comment_id = len(comments) + 1
     comments.append({
         'id': comment_id,
         'conf_id': conf_id,
         'user_id': update.message.from_user.id,
         'text': comment_text,
-        'approved': True,
+        'approved': False,
         'timestamp': update.message.date.isoformat()
     })
     save_comments(comments)
     
     await update.message.reply_text(
-        '💬 **Thank You for Your Kindness!** 💬\n\n'
-        '🙏 **Your supportive comment has been received**\n\n'
-        '✅ Your comment has been posted immediately\n'
-        '📢 Your comment is now visible to everyone!\n\n'
-        '🌟 **Your empathy makes our community stronger**\n\n'
-        '💝 **Want to support more stories?** Visit our channel anytime\n\n'
-        '**Thank you for being part of the healing** ✨',
+        '💬 **Holy Shit, Thanks for Your Support!** 💬\n\n'
+        '🙏 **Your comment is pure fire**\n\n'
+        '👀 Our admin will give it a quick wild glance\n'
+        '📢 Once approved, it will explode as a reply to help others\n\n'
+        '🌟 **Your energy makes our community fucking awesome**\n\n'
+        '💝 **Want to support more crazy stories?** Visit our channel anytime\n\n'
+        '**Thank you for being part of the chaos** ✨',
         reply_markup=ReplyKeyboardRemove()
     )
     
@@ -357,7 +352,7 @@ async def receive_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     feedback_text = update.message.text.strip()
     if not feedback_text:
-        await update.message.reply_text('📝 Please provide feedback. Try again or use /start to cancel.')
+        await update.message.reply_text('Spill your feedback. Try again or use /start to cancel.')
         return FEEDBACK_STATE
     
     # Save feedback to contacts file
@@ -401,7 +396,7 @@ async def receive_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '👀 **Status: Being Reviewed** - Our team will read it carefully\n'
         '💬 You will receive a direct reply from admin if needed\n\n'
         '💝 Your input helps us improve and serve our community better\n\n'
-        '🌟 Thank you for helping us grow!',
+        '🌟 Thanks for fueling the fire!',
         reply_markup=ReplyKeyboardRemove()
     )
     
@@ -417,7 +412,7 @@ async def receive_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     contact_text = update.message.text.strip()
     if not contact_text:
-        await update.message.reply_text('📝 Please provide a message. Try again or use /start to cancel.')
+        await update.message.reply_text('Just type something already. Try again or use /start to cancel.')
         return CONTACT_STATE
     
     # Save contact to file
@@ -465,7 +460,7 @@ async def receive_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
         '👀 Status: Being Reviewed - Our team will read it carefully\n'
         '💬 You will receive a direct reply from admin soon\n\n'
         '⏰ Response Time: Usually within 24 hours\n\n'
-        '🙏 Thank you for your patience and for reaching out!',
+        '🙏 Thanks for reaching out, we got this!',
         reply_markup=ReplyKeyboardRemove()
     )
     
@@ -475,7 +470,7 @@ async def receive_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("Admin sending reply")
-    if update.message.from_user.id not in ADMINS:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ This function is for admins only!')
         return ConversationHandler.END
     
@@ -487,7 +482,7 @@ async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE
     reply_text = update.message.text.strip()
     
     if not reply_text:
-        await update.message.reply_text('📝 Please provide a reply message. Try again or use /start to cancel.')
+        await update.message.reply_text('Type your reply, dude. Try again or use /start to cancel.')
         return ADMIN_REPLY_STATE
     
     contacts = load_contacts()
@@ -513,7 +508,7 @@ async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE
                  f'"{contact["text"][:100]}{"..." if len(contact["text"]) > 100 else ""}"\n\n'
                  f'👨‍💼 Admin Response:\n{reply_text}\n\n'
                  f'✅ Message Status: Read and replied to\n'
-                 f'🙏 Thank you for your patience!'
+                 f'🙏 Thanks for hanging in there!'
         )
         
         print("Reply sent to user")
@@ -527,7 +522,7 @@ async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE
     return ConversationHandler.END
 
 async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id not in ADMINS:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ Unauthorized access!')
         return
     
@@ -543,8 +538,8 @@ async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
 async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id not in ADMINS:
-        await update.message.reply_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
+    if str(update.message.from_user.id) not in ADMINS:
+        await update.message.reply_text('❌ Unauthorized!')
         return
     
     try:
@@ -583,7 +578,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     try:
                         await context.bot.send_message(
                             chat_id=conf['user_id'],
-                            text=f'🌟 Your Confession Was Approved! 🌟\n\nYour anonymous confession #{new_id:03d} has been reviewed and approved!\n\nIt\'s now live in the channel and ready to help others. Thank you for sharing your story! 💝\n\n💭 Others can now comment and support you through the bot.'
+                            text=f'🌟 Your Confession Was Approved! 🌟\n\nYour anonymous confession #{new_id:03d} has been reviewed and approved!\n\nIt\'s now live in the channel and ready to help others. Thanks for unleashing that chaos! 💝\n\n💭 Others can now comment and support you through the bot.'
                         )
                     except Exception as e:
                         # User might have blocked the bot or deleted their account
@@ -603,8 +598,8 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
     
 async def reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id not in ADMINS:
-        await update.message.reply_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
+    if str(update.message.from_user.id) not in ADMINS:
+        await update.message.reply_text('❌ Unauthorized!')
         return
     
     try:
@@ -621,7 +616,7 @@ async def reject(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f'❌ Confession #{conf_id} rejected and removed. 🗑️')
             return
     
-    await update.message.reply_text('❓ Confession not found. Send /start to refresh!')
+    await update.message.reply_text('❓ Confession not found.')
 
 async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -637,30 +632,30 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if confession exists
     approved = load_approved()
     if not any(conf['id'] == conf_id for conf in approved):
-        await update.message.reply_text('❓ Confession not found. Send /start to refresh!')
+        await update.message.reply_text('❓ Confession not found.')
         return
     
     # Save comment
     comments = load_comments()
-    comment_id = get_next_comment_id()
+    comment_id = len(comments) + 1
     comments.append({
         'id': comment_id,
         'conf_id': conf_id,
         'user_id': update.message.from_user.id,
         'text': comment_text,
-        'approved': True,
+        'approved': False,
         'timestamp': update.message.date.isoformat()
     })
     save_comments(comments)
     
     await update.message.reply_text(
-        '💬 **Thank You for Your Kindness!** 💬\n\n'
-        '🙏 **Your supportive comment has been received**\n\n'
-        '✅ Your comment has been posted immediately\n'
-        '📢 Your comment is now visible to everyone!\n\n'
-        '🌟 **Your empathy makes our community stronger**\n\n'
-        '💝 **Want to support more stories?** Visit our channel anytime\n\n'
-        '**Thank you for being part of the healing** ✨',
+        '💬 **Holy Shit, Thanks for Your Support!** 💬\n\n'
+        '🙏 **Your comment is pure fire**\n\n'
+        '👀 Our admin will give it a quick wild glance\n'
+        '📢 Once approved, it will explode as a reply to help others\n\n'
+        '🌟 **Your energy makes our community fucking awesome**\n\n'
+        '💝 **Want to support more crazy stories?** Visit our channel anytime\n\n'
+        '**Thank you for being part of the chaos** ✨',
         reply_markup=ReplyKeyboardRemove()
     )
     
@@ -692,8 +687,8 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
 async def view_comments(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id not in ADMINS:
-        await update.message.reply_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
+    if str(update.message.from_user.id) not in ADMINS:
+        await update.message.reply_text('❌ Unauthorized!')
         return
     
     try:
@@ -716,8 +711,8 @@ async def view_comments(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text)
 
 async def approve_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id not in ADMINS:
-        await update.message.reply_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
+    if str(update.message.from_user.id) not in ADMINS:
+        await update.message.reply_text('❌ Unauthorized!')
         return
     
     try:
@@ -766,8 +761,8 @@ async def approve_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('❓ Comment not found or already approved.')
 
 async def reject_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id not in ADMINS:
-        await update.message.reply_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
+    if str(update.message.from_user.id) not in ADMINS:
+        await update.message.reply_text('❌ Unauthorized!')
         return
     
     try:
@@ -818,7 +813,7 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Check if confession exists
     approved = load_approved()
     if not any(conf['id'] == conf_id for conf in approved):
-        await update.message.reply_text('❓ Confession not found. Send /start to refresh!')
+        await update.message.reply_text('❓ Confession not found.')
         return
     
     # Notify admin
@@ -831,7 +826,7 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text('✅ Report submitted. Thank you for helping keep the community safe! 🛡️')
 
 async def intro(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id not in ADMINS:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ This command is for admins only!')
         return
     
@@ -847,24 +842,24 @@ Example: /approve 1
 """
 async def handle_main_menu_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        '👋 Please use the buttons above to navigate!\n\n'
-        '🎯 Click "Share My Story" to share your confession\n'
-        '💬 Click "Support Others" to comment on stories\n'
-        '🌟 Click "About Our Community" to learn more\n'
-        '🛡️ Click "Safety First" for guidelines\n\n'
+        '👋 Hit those buttons above, dude!\n\n'
+        '🎯 Click "Unleash My Chaos" to share your confession\n'
+        '💬 Click "Join the Chaos" to comment on stories\n'
+        '🌟 Click "Our Wild Story" to learn more\n'
+        '🛡️ Click "Chaos Rules" for guidelines\n\n'
         'All interactions are through buttons - no typing needed! ✨'
     )
 async def handle_main_menu_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         '🚫 **Please don\'t type here!**\n\n'
         '❌ This section is for reading only\n'
-        '👆 Use the buttons above to navigate\n\n'
+        '👆 Smash those buttons above\n\n'
         '🎯 **What you can do:**\n'
-        '• 📝 Click "Share My Story" to share your confession\n'
-        '• 💬 Click "Support Others" to comment on stories\n'
-        '• 🌟 Click "About Our Community" to learn more\n'
-        '• 🛡️ Click "Safety First" for guidelines\n'
-        '• ❓ Click "How It Works" for help\n'
+        '• 📝 Click "Unleash My Chaos" to share your confession\n'
+        '• 💬 Click "Join the Chaos" to comment on stories\n'
+        '• 🌟 Click "Our Wild Story" to learn more\n'
+        '• 🛡️ Click "Chaos Rules" for guidelines\n'
+        '• ❓ Click "How to Go Wild" for help\n'
         '• 📞 Click "Contact Us" for support\n\n'
         '✨ **No typing needed** - everything is button-driven!'
     )
@@ -911,11 +906,11 @@ async def handle_admin_message(update: Update, context: ContextTypes.DEFAULT_TYP
                 )
                 editing_confession_id = None
                 return
-        await update.message.reply_text('❓ Confession not found for editing. Send /start to refresh!')
+        await update.message.reply_text('❓ Confession not found for editing.')
         editing_confession_id = None
 
 async def help_admin(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id not in ADMINS:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ This command is for admins only!')
         return
     
@@ -939,7 +934,7 @@ Example: Use /view_contacts and click Reply buttons to respond
     await update.message.reply_text(help_text)
 
 async def view_contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id not in ADMINS:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ This command is for admins only!')
         return
     
@@ -966,7 +961,7 @@ async def view_contacts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, reply_markup=reply_markup)
 
 async def reply_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.message.from_user.id not in ADMINS:
+    if str(update.message.from_user.id) not in ADMINS:
         await update.message.reply_text('❌ This command is for admins only!')
         return
     
@@ -978,7 +973,7 @@ async def reply_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
         contact_id = int(context.args[0])
         reply_text = ' '.join(context.args[1:])
     except ValueError:
-        await update.message.reply_text('❌ Invalid contact ID.')
+        await update.message.reply_text('❌ That contact ID is bullshit.')
         return
     
     contacts = load_contacts()
@@ -1003,7 +998,7 @@ async def reply_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
                  f'"{contact["text"][:100]}{"..." if len(contact["text"]) > 100 else ""}"\n\n'
                  f'👨‍💼 **Admin Response:**\n{reply_text}\n\n'
                  f'✅ **Message Status:** Read and replied to\n'
-                 f'🙏 Thank you for your patience!'
+                 f'🙏 Thanks for hanging in there!'
         )
         
         await update.message.reply_text(f'✅ Reply sent to user #{contact_id}!')
@@ -1038,25 +1033,25 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         about_text = """
 🌟 About Hope Confessions 🌟
 
-💝 Our Mission: Creating a safe haven for hearts to heal
+💥 Our Mission: A total freak zone for hearts to explode
 
 🤝 What We Believe:
-• 🙈 Anonymity is sacred - Your story, your privacy, your choice
-• 👥 Community heals - Together we find strength in vulnerability  
-• 🛡️ Safety first - Every message is reviewed with compassion
-• 💪 Empowerment through sharing - Your courage inspires others
+• 🙈 Anonymity is sacred - Your story, your chaos, your rules
+• 👥 Community goes wild - Together we unleash our inner demons  
+• 🛡️ Safety-ish - We glance at stuff, don't be evil
+• 💪 Raw power through sharing - Your craziness inspires madness
 
 📊 Our Impact:
-• ❤️ 1000+ stories shared - Each one matters
-• 🤗 Countless lives touched - Through empathy and understanding
-• 🌱 Growth fostered - Personal journeys celebrated
+• ❤️ 1000+ stories unleashed - Each one a bomb
+• 🤗 Countless minds blown - Through wild empathy
+• 🌱 Chaos fostered - Personal freakouts celebrated
 
 🎯 Our Promise:
-• 🔒 Zero data collection - What you share stays between you and us
-• 👨‍⚕️ Caring moderation - Human review with heart
-• 🌈 Positive focus - Building bridges, not walls
+• 🔒 Zero data collection - What you spill stays between you and the void
+• 👨‍⚕️ Wild moderation - Human review with attitude
+• 🌈 Crazy focus - Building explosions, not walls
 
-Built with love for the human experience 💙
+Built with chaos for the human freakshow 💥
 """
         await query.edit_message_text(about_text, reply_markup=reply_markup)
         return MAIN_MENU
@@ -1064,14 +1059,14 @@ Built with love for the human experience 💙
         keyboard = [[InlineKeyboardButton("⬅️ Back to Menu", callback_data='back_to_menu')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         help_text = """
-❓ How to Use
+❓ How to Use (It's Easy AF)
 
-1. 📝 Click "Share My Story" to share your confession
-2. ✍️ Type your message and send it
-3. ✅ Your confession is reviewed by our admin
-4. 📢 If approved, it appears anonymously in the channel
+1. 📝 Click "Unleash My Chaos" to unleash your confession
+2. ✍️ Type your wild message and blast it
+3. ✅ Your confession gets a quick glance by our admin
+4. 📢 If approved, it explodes anonymously in the channel
 
-💭 You can also support others by commenting on their stories!
+💭 You can also comment on other people's crazy stories!
 
 All interactions are through buttons - no commands needed! 🎯
 """
@@ -1084,18 +1079,18 @@ All interactions are through buttons - no commands needed! 🎯
             keyboard = [[InlineKeyboardButton("⬅️ Back to Menu", callback_data='back_to_menu')]]
             reply_markup = InlineKeyboardMarkup(keyboard)
             await query.edit_message_text(
-                '💬 Support Others 💬\n\n'
+                '💬 Join the Chaos 💬\n\n'
                 'No confessions available to comment on yet.\n'
-                'Check back later when more stories are shared!\n\n'
-                '🌟 You can also share your own story to start the conversation.',
+                'Check back later when more wild stories are shared!\n\n'
+                '🌟 You can also unleash your own story to kick off the chaos.',
                 reply_markup=reply_markup
             )
             return MAIN_MENU
         
         # Show last 5 confessions with comment buttons
         keyboard = []
-        message_text = '💬 Support Others - Choose a Story to Comment On 💬\n\n'
-        message_text += 'Here are recent confessions that could use your support:\n\n'
+        message_text = '💬 Join the Chaos - Unleash Your Thoughts on Wild Stories 💬\n\n'
+        message_text += 'Here are recent confessions that could use your crazy energy:\n\n'
         
         # Show up to 5 most recent confessions
         recent_confessions = approved[-5:] if len(approved) > 5 else approved
@@ -1105,12 +1100,15 @@ All interactions are through buttons - no commands needed! 🎯
             # Truncate long confessions for preview
             preview = conf['text'][:100] + '...' if len(conf['text']) > 100 else conf['text']
             message_text += f'#{conf["id"]:03d}: {preview}\n\n'
-            keyboard.append([InlineKeyboardButton(f'💬 View Comments #{conf["id"]:03d}', callback_data=f'view_comments_{conf["id"]}'), InlineKeyboardButton(f'💭 Comment on #{conf["id"]:03d}', callback_data=f'comment_on_{conf["id"]}')])
+            keyboard.append([
+                InlineKeyboardButton(f'👀 View Comments #{conf["id"]:03d}', callback_data=f'view_comments_{conf["id"]}'),
+                InlineKeyboardButton(f'💭 Comment on #{conf["id"]:03d}', callback_data=f'comment_on_{conf["id"]}')
+            ])
         
         keyboard.append([InlineKeyboardButton("⬅️ Back to Menu", callback_data='back_to_menu')])
         reply_markup = InlineKeyboardMarkup(keyboard)
         
-        message_text += 'Click a button above to share your thoughts and support!'
+        message_text += 'Click a button above to unleash your thoughts and join the chaos!'
         
         await query.edit_message_text(message_text, reply_markup=reply_markup)
         return MAIN_MENU
@@ -1119,7 +1117,7 @@ All interactions are through buttons - no commands needed! 🎯
         try:
             conf_id = int(query.data.split('_')[2])
         except (IndexError, ValueError):
-            await query.answer("Invalid confession ID")
+            await query.answer("Confession ID is whack")
             return MAIN_MENU
         
         # Check if confession exists
@@ -1139,14 +1137,53 @@ All interactions are through buttons - no commands needed! 🎯
         preview = conf['text'][:150] + '...' if len(conf['text']) > 150 else conf['text']
         
         await query.edit_message_text(
-            f'💬 Comment on Confession #{conf_id:03d} 💬\n\n'
+            f'💬 Unleash Your Thoughts on Confession #{conf_id:03d} 💬\n\n'
             f'📝 Confession: {preview}\n\n'
-            'Please reply to this message with your anonymous comment.\n\n'
-            'Example: This really helped me too!\n\n'
-            'Your comment will be reviewed before posting.',
+            'Drop your anonymous comment below.\n\n'
+            'Example: This shit really hit home!\n\n'
+            'Your comment will be reviewed before exploding live.',
             reply_markup=reply_markup
         )
         return ASK_COMMENT
+    elif query.data.startswith('view_comments_'):
+        # Extract confession ID from callback data
+        try:
+            conf_id = int(query.data.split('_')[2])
+        except (IndexError, ValueError):
+            await query.answer("Confession ID is whack")
+            return MAIN_MENU
+        
+        # Check if confession exists
+        approved = load_approved()
+        conf = next((c for c in approved if c['id'] == conf_id), None)
+        if not conf:
+            await query.answer("Confession not found")
+            return MAIN_MENU
+        
+        # Load approved comments for this confession
+        comments = load_comments()
+        conf_comments = [c for c in comments if c['confession_id'] == conf_id and c.get('approved', False)]
+        
+        if not conf_comments:
+            message_text = f'💬 Comments on Confession #{conf_id:03d} 💬\n\n'
+            message_text += '📝 Confession:\n' + conf['text'] + '\n\n'
+            message_text += '❓ No comments yet. Be the first to drop some wisdom!'
+        else:
+            message_text = f'💬 Comments on Confession #{conf_id:03d} 💬\n\n'
+            message_text += '📝 Confession:\n' + conf['text'] + '\n\n'
+            message_text += '💭 Community Chaos:\n\n'
+            
+            for comment in conf_comments:
+                message_text += f'#{comment["id"]:03d}: {comment["text"]}\n\n'
+        
+        keyboard = [
+            [InlineKeyboardButton(f'💭 Drop Your Comment', callback_data=f'comment_on_{conf_id}')],
+            [InlineKeyboardButton("⬅️ Back to Wild Confessions", callback_data='comment_help')]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        await query.edit_message_text(message_text, reply_markup=reply_markup)
+        return MAIN_MENU
     elif query.data == 'safety':
         await query.answer()
         keyboard = [
@@ -1158,56 +1195,56 @@ All interactions are through buttons - no commands needed! 🎯
         safety_text = """
 🛡️ Safety & Privacy Guidelines 🛡️
 
-Your safety is our 🌟 top priority! We protect your anonymity and well-being.
+Your chaos is our priority! We protect your anonymity and wild side.
 
 🔒 Privacy Protection:
 • 🙈 All confessions are completely anonymous
-• 🚫 No personal information is ever shared
-• 👀 Admin reviews all content before posting
+• 🚫 No personal info gets spilled
+• 👀 Admin gives stuff a quick look
 
 🚫 What We Don't Allow:
-• 😡 Harmful, abusive, or threatening content
+• 😡 Harmful, abusive, or threatening crap
 • 👊 Personal attacks or harassment
-• ⚖️ Illegal activities or promotion of harm
-• 📢 Spam, scams, or inappropriate content
+• ⚖️ Illegal activities or promoting harm
+• 📢 Spam, scams, or totally inappropriate stuff
 
 📞 If You Need Help:
-• 🚨 Report inappropriate content using the buttons below
-• 👨‍💼 Contact admin for urgent safety concerns
+• 🚨 Report bad content using the buttons below
+• 👨‍💼 Contact admin for urgent chaos concerns
 • 💬 Send feedback to help us improve
 
-💙 Remember: This is a safe space for positive, supportive sharing. 🌈
+💥 Remember: This is a wild space for crazy, supportive sharing. 🌈
 
-Stay safe and be kind! 🙏
+Stay wild and be decent! 🙏
 """
         await query.edit_message_text(safety_text, reply_markup=reply_markup)
         return MAIN_MENU
     elif query.data == 'back_to_menu':
         keyboard = [
-            [InlineKeyboardButton("📝 Share My Story", callback_data='send_confession'),
-             InlineKeyboardButton("💬 Support Others", callback_data='comment_help')],
-            [InlineKeyboardButton("🌟 About Our Community", callback_data='about'),
-             InlineKeyboardButton("🛡️ Safety First", callback_data='safety')],
-            [InlineKeyboardButton("❓ How It Works", callback_data='help_user')]
+            [InlineKeyboardButton("📝 Unleash My Chaos", callback_data='send_confession'),
+             InlineKeyboardButton("💬 Join the Chaos", callback_data='comment_help')],
+            [InlineKeyboardButton("🌟 Our Wild Story", callback_data='about'),
+             InlineKeyboardButton("🛡️ Chaos Rules", callback_data='safety')],
+            [InlineKeyboardButton("❓ How to Go Wild", callback_data='help_user')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         
         intro_text = """
 🎭 Welcome to Hope Confessions 🎭
 
-✨ A Safe Space for Your Heart ✨
+✨ A Wild Place for Your Crazy Stories ✨
 
-💝 Share anonymously, heal together, grow stronger
+💥 Spill your guts anonymously, no judgment here!
 
-🌈 Why people choose us:
-• 🙈 100% Anonymous - Your identity stays private
-• 👥 Supportive Community - Connect with understanding hearts  
-• 🛡️ Safe Environment - All content is carefully reviewed
-• 💪 Empowerment - Your story can inspire others
+🌈 Why people love us:
+• 🙈 100% Anonymous - Your secrets stay locked up tight
+• 👥 Crazy Community - Connect with fellow weirdos  
+• 🛡️ Safety-ish - We check stuff but don't be a total jerk
+• 💪 Raw Energy - Your story might blow minds
 
-📊 Join 1000+ people who've found courage here
+📊 Join 1000+ people who've gone full wild here
 
-🎯 Ready to begin your journey?
+🎯 Ready to unleash your inner chaos?
 """
         await context.bot.send_message(
             chat_id=query.message.chat_id,
@@ -1217,8 +1254,8 @@ Stay safe and be kind! 🙏
         return MAIN_MENU
     elif query.data.startswith('approve_') or query.data.startswith('reject_') or query.data.startswith('edit_'):
         # Admin actions
-        if query.from_user.id not in ADMINS:
-            await query.edit_message_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
+        if str(query.from_user.id) not in ADMINS:
+            await query.edit_message_text('❌ Unauthorized!')
             return
         
         parts = query.data.split('_')
@@ -1307,7 +1344,7 @@ Stay safe and be kind! 🙏
                             try:
                                 await context.bot.send_message(
                                     chat_id=conf['user_id'],
-                                    text=f'🌟 **Your Confession Was Approved!** 🌟\n\nYour anonymous confession #{conf_id:03d} has been reviewed and approved!\n\nIt\'s now live in the channel and ready to help others. Thank you for sharing your story! 💝\n\n💭 Others can now comment and support you through the bot.'
+                                    text=f'🌟 **Your Confession Was Approved!** 🌟\n\nYour anonymous confession #{conf_id:03d} has been reviewed and approved!\n\nIt\'s now live in the channel and ready to help others. Thanks for unleashing that chaos! 💝\n\n💭 Others can now comment and support you through the bot.'
                                 )
                             except Exception as e:
                                 # User might have blocked the bot or deleted their account
@@ -1333,11 +1370,11 @@ Stay safe and be kind! 🙏
                     await query.edit_message_text(f'✏️ Editing confession #{conf_id}.\n\nCurrent text: "{conf["text"]}"\n\nReply with the corrected confession:')
                 return
         
-        await query.edit_message_text('❓ Confession not found. Send /start to refresh!')
+        await query.edit_message_text('❓ Confession not found.')
     elif query.data.startswith('approve_comment_') or query.data.startswith('reject_comment_'):
         # Admin comment actions
-        if query.from_user.id not in ADMINS:
-            await query.edit_message_text('❌ **Unauthorized Access** ❌\n\n🔒 **Admin access required**\n\n🔄 **For regular users:**\nSend `/start` to use the confession bot!\n\n💡 **Only admins can use this command** 👑')
+        if str(query.from_user.id) not in ADMINS:
+            await query.edit_message_text('❌ Unauthorized!')
             return
         
         parts = query.data.split('_')
@@ -1413,7 +1450,7 @@ Stay safe and be kind! 🙏
     elif query.data.startswith('reply_contact_'):
         # Admin reply to contact/feedback
         await query.answer()
-        if query.from_user.id not in ADMINS:
+        if str(query.from_user.id) not in ADMINS:
             return
         
         contact_id = int(query.data.split('_')[2])
@@ -1454,6 +1491,11 @@ Stay safe and be kind! 🙏
         print("State set to ADMIN_REPLY_STATE")
         return ADMIN_REPLY_STATE
 
+@app.route('/webhook', methods=['POST'])
+async def webhook():
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    await application.process_update(update)
+    return 'OK'
 
 def setup_credentials():
     """Check if credentials are set."""
@@ -1466,7 +1508,7 @@ def setup_credentials():
             print(f"   🌐 Webhook URL: {WEBHOOK_URL}")
         return True
     else:
-        print("❌ Credentials not properly set. Please check environment variables:")
+        print("❌ Your credentials are fucked. Check the environment variables:")
         print("   BOT_TOKEN, CHANNEL_ID, ADMIN_IDS")
         return False
 
@@ -1502,7 +1544,7 @@ async def setup_handlers(application):
                 CommandHandler('start', start)  # Allow restart
             ],
         },
-        fallbacks=[CommandHandler('start', start), MessageHandler(filters.ALL, fallback_handler)],
+        fallbacks=[CommandHandler('start', start)],
         per_message=False
     )
     
@@ -1522,8 +1564,6 @@ async def setup_handlers(application):
     application.add_handler(CommandHandler('report', report))
     application.add_handler(CallbackQueryHandler(button_callback))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_admin_message))
-    # Add error handler for better user experience
-    application.add_error_handler(error_handler)
 
 async def initialize_bot():
     """Initialize the bot application for Railway."""
@@ -1576,40 +1616,6 @@ async def initialize_bot():
     except Exception as e:
         print(f"❌ Failed to initialize bot: {e}")
         raise
-async def fallback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle unexpected messages and guide users to restart."""
-    await update.message.reply_text(
-        "🤖 **I'm not sure what you mean...** 🤖\n\n"
-        "🔄 **Let's start fresh!**\n"
-        "Send `/start` to begin a new conversation\n\n"
-        "💡 **This helps reset any confusion!** ✨"
-    )
-async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Handle errors and guide users to restart."""
-    try:
-        # Log the error
-        print(f"❌ Error occurred: {context.error}")
-        
-        # Try to send a helpful message to the user
-        if update and update.effective_user:
-            error_message = (
-                "🤖 **Oops! Something went wrong with the bot** 🤖\n\n"
-                "🔄 **Please restart the conversation:**\n"
-                "Send `/start` to begin again\n\n"
-                "💡 **This usually fixes most issues!**\n\n"
-                "If problems persist, contact the admin."
-            )
-            
-            try:
-                if update.callback_query:
-                    await update.callback_query.message.reply_text(error_message)
-                elif update.message:
-                    await update.message.reply_text(error_message)
-            except Exception as e:
-                print(f"❌ Could not send error message: {e}")
-                
-    except Exception as e:
-        print(f"❌ Error in error handler: {e}")
 
 async def main():
     global application
