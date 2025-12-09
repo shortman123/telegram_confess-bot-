@@ -284,6 +284,7 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     comment_text = update.message.text.strip()
     if not comment_text:
         await update.message.reply_text('Drop a comment already. Try again or use /start to cancel.')
+        return ASK_COMMENT
     
     # Check if confession exists
     approved = load_approved()
@@ -327,6 +328,7 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=admin, 
             text=f'💬 New Comment on Confession #{conf_id:03d} 💬\n\n💭 Comment:\n{comment_text}\n\n👤 Comment ID: {comment_id}',
             reply_markup=reply_markup
+        )
     
     # Notify the confession sender
     conf = next((c for c in approved if c['id'] == conf_id), None)
@@ -386,6 +388,7 @@ async def receive_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=admin,
             text=f'💬 New Feedback 💬\n\n{user_info}\n\n💭 Feedback:\n{feedback_text}\n\n📅 Status: Awaiting review',
             reply_markup=reply_markup
+        )
     
     await update.message.reply_text(
         '✅ **Feedback Sent Successfully!** ✅\n\n'
@@ -506,6 +509,7 @@ async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE
                  f'👨‍💼 Admin Response:\n{reply_text}\n\n'
                  f'✅ Message Status: Read and replied to\n'
                  f'🙏 Thanks for hanging in there!'
+        )
         
         print("Reply sent to user")
         await update.message.reply_text(f'✅ Reply sent to user #{contact_id}!')
@@ -667,6 +671,7 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=admin, 
             text=f'💬 New Comment on Confession #{conf_id:03d} 💬\n\n💭 Comment:\n{comment_text}\n\n👤 Comment ID: {comment_id}',
             reply_markup=reply_markup
+        )
     
     # Notify the confession sender
     approved = load_approved()
@@ -816,6 +821,7 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(
             chat_id=admin,
             text=f'🚨 Report Received 🚨\n\nConfession #{conf_id:03d}\n👤 Reporter: {update.message.from_user.first_name}\n📝 Reason: {reason}'
+        )
     
     await update.message.reply_text('✅ Report submitted. Thank you for helping keep the community safe! 🛡️')
 
@@ -993,6 +999,7 @@ async def reply_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
                  f'👨‍💼 **Admin Response:**\n{reply_text}\n\n'
                  f'✅ **Message Status:** Read and replied to\n'
                  f'🙏 Thanks for hanging in there!'
+        )
         
         await update.message.reply_text(f'✅ Reply sent to user #{contact_id}!')
         
@@ -1018,6 +1025,7 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             'Ready to share? Just type your message below and send it to me\n'
             'We\'re here with open hearts 💕',
             reply_markup=reply_markup
+        )
         return ASK_CONFESSION
     elif query.data == 'about':
         keyboard = [[InlineKeyboardButton("⬅️ Back to Menu", callback_data='back_to_menu')]]
@@ -1104,6 +1112,39 @@ All interactions are through buttons - no commands needed! 🎯
         
         await query.edit_message_text(message_text, reply_markup=reply_markup)
         return MAIN_MENU
+    elif query.data.startswith('comment_on_'):
+        # Extract confession ID from callback data
+        try:
+            conf_id = int(query.data.split('_')[2])
+        except (IndexError, ValueError):
+            await query.answer("Confession ID is whack")
+            return MAIN_MENU
+        
+        # Check if confession exists
+        approved = load_approved()
+        conf = next((c for c in approved if c['id'] == conf_id), None)
+        if not conf:
+            await query.answer("Confession not found")
+            return MAIN_MENU
+        
+        # Set up comment session
+        context.user_data['comment_conf_id'] = conf_id
+        
+        # Show confirmation and prompt for comment
+        keyboard = [[InlineKeyboardButton("⬅️ Cancel", callback_data='back_to_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        preview = conf['text'][:150] + '...' if len(conf['text']) > 150 else conf['text']
+        
+        await query.edit_message_text(
+            f'💬 Unleash Your Thoughts on Confession #{conf_id:03d} 💬\n\n'
+            f'📝 Confession: {preview}\n\n'
+            'Drop your anonymous comment below.\n\n'
+            'Example: This shit really hit home!\n\n'
+            'Your comment will be reviewed before exploding live.',
+            reply_markup=reply_markup
+        )
+        return ASK_COMMENT
     elif query.data.startswith('view_comments_'):
         # Extract confession ID from callback data
         try:
@@ -1209,6 +1250,7 @@ Stay wild and be decent! 🙏
             chat_id=query.message.chat_id,
             text=intro_text,
             reply_markup=reply_markup
+        )
         return MAIN_MENU
     elif query.data.startswith('approve_') or query.data.startswith('reject_') or query.data.startswith('edit_'):
         # Admin actions
@@ -1385,6 +1427,7 @@ Stay wild and be decent! 🙏
             'Just type your message and send it to us!\n'
             '👀 Your message will be reviewed by our admin team.',
             reply_markup=reply_markup
+        )
         # Set user state for contact
         context.user_data['awaiting_contact'] = True
         return CONTACT_STATE
@@ -1400,6 +1443,7 @@ Stay wild and be decent! 🙏
             '🐛 Found any issues?\n\n'
             'Just type your message and send it to us! ✨',
             reply_markup=reply_markup
+        )
         # Set user state for feedback
         context.user_data['awaiting_feedback'] = True
         return FEEDBACK_STATE
@@ -1431,6 +1475,7 @@ Stay wild and be decent! 🙏
             f'👤 From: {user_info}\n'
             f'💭 Original: {contact["text"]}\n\n'
             f'📝 Type your reply message and send it:'
+        )
         
         keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data='back_to_menu')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -1440,6 +1485,7 @@ Stay wild and be decent! 🙏
             f'💭 Original: {contact["text"]}\n\n'
             f'📝 Type your reply message and send it:',
             reply_markup=reply_markup
+        )
         
         # Set state for receiving admin reply
         print("State set to ADMIN_REPLY_STATE")
@@ -1622,6 +1668,7 @@ async def main():
             port=int(os.environ.get('PORT', 5000)),
             url_path="webhook",
             webhook_url=WEBHOOK_URL
+        )
         print("✅ Bot webhook is now running! Press Ctrl+C to stop.")
         try:
             # Keep the bot running
