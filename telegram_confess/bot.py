@@ -544,7 +544,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # Post to channel
             try:
                 if CHANNEL_ID:
-                    keyboard = [[InlineKeyboardButton("💭 Comment", url=f"https://t.me/{BOT_USERNAME}?start=comment_{conf_id}")]]
+                    keyboard = [[InlineKeyboardButton("💭 Comment", url=f"https://t.me/{BOT_USERNAME}?start=view_comments_{conf_id}")]]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     message = await context.bot.send_message(
                         chat_id=CHANNEL_ID, 
@@ -1340,7 +1340,7 @@ Stay safe and be kind! 🙏
                 if action == 'approve':
                     try:
                         if CHANNEL_ID:
-                            keyboard = [[InlineKeyboardButton("💭 Comment", url=f"https://t.me/{BOT_USERNAME}?start=comment_{conf_id}")]]
+                            keyboard = [[InlineKeyboardButton("💭 Comment", url=f"https://t.me/{BOT_USERNAME}?start=view_comments_{conf_id}")]]
                             reply_markup = InlineKeyboardMarkup(keyboard)
                             message = await context.bot.send_message(
                                 chat_id=CHANNEL_ID, 

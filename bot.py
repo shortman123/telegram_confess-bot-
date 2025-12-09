@@ -162,7 +162,74 @@ def get_next_confession_id():
     return max(max_pending_id, max_approved_id) + 1
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(f"User ID: {update.message.from_user.id}")
+    # Handle deep link for viewing comments (from channel)
+    if context.args and len(context.args) > 0 and context.args[0].startswith('view_comments_'):
+        try:
+            # Check if the deep link contained a specific confession ID
+            arg = context.args[0]
+            parts = arg.split('_')
+            # deeplink format is 'view_comments_{id}' => ['view','comments','{id}']
+            conf_id = int(parts[2]) if len(parts) > 2 and parts[2].isdigit() else None
+        except Exception:
+            conf_id = None
+        try:
+            approved = load_approved()
+            if conf_id:
+                # Show the single confession and its comments
+                conf = next((c for c in approved if c['id'] == conf_id), None)
+                if not conf:
+                    await update.message.reply_text('❓ Confession not found.')
+                    return MAIN_MENU
+                comments = load_comments()
+                conf_comments = [c for c in comments if c.get('conf_id', c.get('confession_id')) == conf_id and c.get('approved', True)]
+                message_text = f'💬 Comments on Confession #{conf_id:03d} 💬\n\n'
+                message_text += '📝 Confession:\n' + conf['text'] + '\n\n'
+                if not conf_comments:
+                    message_text += '❓ No comments yet. Be the first to drop some wisdom!\n\n'
+                else:
+                    message_text += '💭 Community Chaos:\n\n'
+                    for comment in conf_comments:
+                        message_text += f'#{comment["id"]:03d}: {comment["text"]}\n\n'
+                keyboard = [
+                    [InlineKeyboardButton(f'💭 Drop Your Comment', callback_data=f'comment_on_{conf_id}')],
+                    [InlineKeyboardButton('🔄 Refresh Comments', callback_data=f'view_comments_{conf_id}')],
+                    [InlineKeyboardButton("⬅️ Back to Wild Confessions", callback_data='comment_help')]
+                ]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await update.message.reply_text(message_text, reply_markup=reply_markup)
+                return MAIN_MENU
+            # If no conf_id specified or not found, show general 'Join the Chaos' list
+            if not approved:
+                keyboard = [[InlineKeyboardButton("⬅️ Back to Menu", callback_data='back_to_menu')]]
+                reply_markup = InlineKeyboardMarkup(keyboard)
+                await update.message.reply_text(
+                    '💬 Join the Chaos 💬\n\n'
+                    'No confessions available to comment on yet.\n'
+                    'Check back later when more wild stories are shared!\n\n'
+                    '🌟 You can also unleash your own story to kick off the chaos.',
+                    reply_markup=reply_markup
+                )
+                return MAIN_MENU
+            keyboard = []
+            message_text = '💬 Join the Chaos - Unleash Your Thoughts on Wild Stories 💬\n\n'
+            message_text += 'Here are recent confessions that could use your crazy energy:\n\n'
+            recent_confessions = approved[-5:] if len(approved) > 5 else approved
+            recent_confessions.reverse()
+            for i, conf in enumerate(recent_confessions):
+                preview = conf['text'][:100] + '...' if len(conf['text']) > 100 else conf['text']
+                message_text += f'#{conf["id"]:03d}: {preview}\n\n'
+                keyboard.append([
+                    InlineKeyboardButton(f'👀 View Comments #{conf["id"]:03d}', callback_data=f'view_comments_{conf["id"]}'),
+                    InlineKeyboardButton(f'💭 Comment on #{conf["id"]:03d}', callback_data=f'comment_on_{conf["id"]}')
+                ])
+            keyboard.append([InlineKeyboardButton("⬅️ Back to Menu", callback_data='back_to_menu')])
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            message_text += 'Click a button above to unleash your thoughts and join the chaos!'
+            await update.message.reply_text(message_text, reply_markup=reply_markup)
+            return MAIN_MENU
+        except Exception:
+            await update.message.reply_text('❓ This comment link is messed up.')
+            return
     # Handle deep link for commenting
     if context.args and len(context.args) > 0 and context.args[0].startswith('comment_'):
         try:
@@ -172,21 +239,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if any(conf['id'] == conf_id for conf in approved):
                 await update.message.reply_text(
                     f'💬 Comment on Confession #{conf_id:03d} 💬\n\n'
-                    'Drop your anonymous comment below.\n\n'
-                    'Example: This really helped me too!\n\n'
-                    'Your comment will be reviewed before posting.',
+                    'Got something to say? 🔥 Drop your anonymous comment below 😎',
                     reply_markup=ReplyKeyboardRemove()
                 )
                 # Set user state for comment
                 context.user_data['comment_conf_id'] = conf_id
-                return ASK_COMMENT  # Need to define this state
+                return ASK_COMMENT
             else:
                 await update.message.reply_text('❓ Confession not found.')
                 return
-        except:
+        except Exception:
             await update.message.reply_text('❓ This comment link is fucked up.')
             return
-    
     keyboard = [
         [InlineKeyboardButton("📝 Unleash My Chaos", callback_data='send_confession'),
          InlineKeyboardButton("💬 Join the Chaos", callback_data='comment_help')],
@@ -195,7 +259,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("❓ How to Go Wild", callback_data='help_user')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    
     intro_text = """
 🎭 Welcome to Hope Confessions 🎭
 
@@ -284,6 +347,7 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     comment_text = update.message.text.strip()
     if not comment_text:
         await update.message.reply_text('Drop a comment already. Try again or use /start to cancel.')
+        return ASK_COMMENT
     
     # Check if confession exists
     approved = load_approved()
@@ -305,13 +369,7 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_comments(comments)
     
     await update.message.reply_text(
-        '💬 **Holy Shit, Thanks for Your Support!** 💬\n\n'
-        '🙏 **Your comment is pure fire**\n\n'
-        '✅ Your comment is live instantly\n'
-        '📢 Your comment is now live and helping others\n\n'
-        '🌟 **Your energy makes our community fucking awesome**\n\n'
-        '💝 **Want to support more crazy stories?** Visit our channel anytime\n\n'
-        '**Thank you for being part of the chaos** ✨',
+        '💬 🔥 Comment Dropped! 🔥\n⚡️ Your words just lit up the feed!',
         reply_markup=ReplyKeyboardRemove()
     )
     
@@ -327,6 +385,7 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=admin, 
             text=f'💬 New Comment on Confession #{conf_id:03d} 💬\n\n💭 Comment:\n{comment_text}\n\n👤 Comment ID: {comment_id}',
             reply_markup=reply_markup
+        )
     
     # Notify the confession sender
     conf = next((c for c in approved if c['id'] == conf_id), None)
@@ -386,6 +445,7 @@ async def receive_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=admin,
             text=f'💬 New Feedback 💬\n\n{user_info}\n\n💭 Feedback:\n{feedback_text}\n\n📅 Status: Awaiting review',
             reply_markup=reply_markup
+        )
     
     await update.message.reply_text(
         '✅ **Feedback Sent Successfully!** ✅\n\n'
@@ -506,6 +566,7 @@ async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE
                  f'👨‍💼 Admin Response:\n{reply_text}\n\n'
                  f'✅ Message Status: Read and replied to\n'
                  f'🙏 Thanks for hanging in there!'
+        )
         
         print("Reply sent to user")
         await update.message.reply_text(f'✅ Reply sent to user #{contact_id}!')
@@ -552,7 +613,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if CHANNEL_ID:
                     approved = load_approved()
                     new_id = len(approved) + 1
-                    keyboard = [[InlineKeyboardButton("💭 Comment", url=f"https://t.me/{BOT_USERNAME}?start=comment_{new_id}")]]
+                    keyboard = [[InlineKeyboardButton("💭 Comments", url=f"https://t.me/{BOT_USERNAME}?start=view_comments_{new_id}")]]
                     reply_markup = InlineKeyboardMarkup(keyboard)
                     message = await context.bot.send_message(
                         chat_id=CHANNEL_ID, 
@@ -667,6 +728,7 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=admin, 
             text=f'💬 New Comment on Confession #{conf_id:03d} 💬\n\n💭 Comment:\n{comment_text}\n\n👤 Comment ID: {comment_id}',
             reply_markup=reply_markup
+        )
     
     # Notify the confession sender
     approved = load_approved()
@@ -816,8 +878,9 @@ async def report(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(
             chat_id=admin,
             text=f'🚨 Report Received 🚨\n\nConfession #{conf_id:03d}\n👤 Reporter: {update.message.from_user.first_name}\n📝 Reason: {reason}'
+        )
     
-    await update.message.reply_text('✅ Report submitted. Thank you for helping keep the community safe! 🛡️')
+    await update.message.reply_text('✅ Report sent!\nAdmin is reviewing it.\nYou’ll get a reply soon.')
 
 async def intro(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id not in ADMINS:
@@ -987,13 +1050,15 @@ async def reply_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         await context.bot.send_message(
             chat_id=contact['user_id'],
-            text=f'💬 **Admin Reply** 💬\n\n'
-                 f'📋 **Regarding your {original_type}:**\n'
-                 f'"{contact["text"][:100]}{"..." if len(contact["text"]) > 100 else ""}"\n\n'
-                 f'👨‍💼 **Admin Response:**\n{reply_text}\n\n'
-                 f'✅ **Message Status:** Read and replied to\n'
-                 f'🙏 Thanks for hanging in there!'
-        
+            text=(
+                '💬 Admin Reply\n\n'
+                '📩 Your message:\n'
+                f'"{contact["text"]}"\n\n'
+                '👨‍💼 Admin:\n'
+                f'"{reply_text}"\n\n'
+                '✅ Read & replied.'
+            )
+        )
         await update.message.reply_text(f'✅ Reply sent to user #{contact_id}!')
         
     except Exception as e:
@@ -1006,45 +1071,38 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard = [[InlineKeyboardButton("⬅️ Take Me Back", callback_data='back_to_menu')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         await query.edit_message_text(
-            'Your Story Matters - Let\'s Begin ✨\n\n'
-            'Take a deep breath... 🌬️\n\n'
-            'This is your safe space - no judgment, only understanding hearts\n\n'
-            'What\'s weighing on your soul today?\n'
-            '• 💭 "I\'ve been carrying this secret for years..."\n'
-            '• ❤️ "I\'m learning to love myself again after everything"\n'
-            '• 🌟 "Today I conquered a fear I thought would break me"\n'
-            '• 🤝 "I need someone to understand what I\'m going through"\n\n'
-            'Your words have power - they can heal you and help others\n\n'
-            'Ready to share? Just type your message below and send it to me\n'
-            'We\'re here with open hearts 💕',
+            "Alright, brave soul 😎\nDrop your confession below…\nNo one will know it’s you — we keep it fully anonymous.",
             reply_markup=reply_markup
+        )
         return ASK_CONFESSION
     elif query.data == 'about':
         keyboard = [[InlineKeyboardButton("⬅️ Back to Menu", callback_data='back_to_menu')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
         about_text = """
-🌟 About Hope Confessions 🌟
+    🌋 WELCOME TO HOPE CONFESSIONS 🌋
+    Where peace comes to die and chaos comes to party.
 
-💥 Our Mission: A total freak zone for hearts to explode
+    💥 OUR MISSION:
+    This is a full-blown freak zone where hearts erupt, secrets combust, and sanity takes a vacation.
 
-🤝 What We Believe:
-• 🙈 Anonymity is sacred - Your story, your chaos, your rules
-• 👥 Community goes wild - Together we unleash our inner demons  
-• 🛡️ Safety-ish - We glance at stuff, don't be evil
-• 💪 Raw power through sharing - Your craziness inspires madness
+    🤝 WHAT WE STAND FOR:
+    • 🙈 Anonymity is holy — Drop your sins, disappear into the smoke.
+    • 👥 Community unhinged — We don't just share… we detonate together.
+    • 🛡️ Safety-ish — We peek, we filter, but don't push your luck.
+    • 💪 Unfiltered power — Your madness fuels someone else's meltdown.
 
-📊 Our Impact:
-• ❤️ 1000+ stories unleashed - Each one a bomb
-• 🤗 Countless minds blown - Through wild empathy
-• 🌱 Chaos fostered - Personal freakouts celebrated
+    📊 OUR IMPACT:
+    • ❤️ 1000+ confessions uncaged — Every one a ticking emotional bomb.
+    • 🤯 Minds shattered — Empathy hits different when it's feral.
+    • 🌱 Chaos cultivated — We don't judge your freakouts… we water them.
 
-🎯 Our Promise:
-• 🔒 Zero data collection - What you spill stays between you and the void
-• 👨‍⚕️ Wild moderation - Human review with attitude
-• 🌈 Crazy focus - Building explosions, not walls
+    🎯 OUR PROMISE:
+    • 🔒 Zero data hoarding — What you scream into the void stays in the void.
+    • 👨‍⚕️ Reckless moderation — Human eyes, zero filters, maximum attitude.
+    • 🌈 Chaos-first design — We build explosions, not safe spaces.
 
-Built with chaos for the human freakshow 💥
-"""
+    Built with unapologetic disorder for the beautiful human freakshow that we all are. 💥
+    """
         await query.edit_message_text(about_text, reply_markup=reply_markup)
         return MAIN_MENU
     elif query.data == 'help_user':
@@ -1104,6 +1162,39 @@ All interactions are through buttons - no commands needed! 🎯
         
         await query.edit_message_text(message_text, reply_markup=reply_markup)
         return MAIN_MENU
+    elif query.data.startswith('comment_on_'):
+        # Extract confession ID from callback data
+        try:
+            conf_id = int(query.data.split('_')[2])
+        except (IndexError, ValueError):
+            await query.answer("Confession ID is whack")
+            return MAIN_MENU
+        
+        # Check if confession exists
+        approved = load_approved()
+        conf = next((c for c in approved if c['id'] == conf_id), None)
+        if not conf:
+            await query.answer("Confession not found")
+            return MAIN_MENU
+        
+        # Set up comment session
+        context.user_data['comment_conf_id'] = conf_id
+        
+        # Show confirmation and prompt for comment
+        keyboard = [[InlineKeyboardButton("⬅️ Cancel", callback_data='back_to_menu')]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        
+        preview = conf['text'][:150] + '...' if len(conf['text']) > 150 else conf['text']
+        
+        await query.edit_message_text(
+            f'💬 Unleash Your Thoughts on Confession #{conf_id:03d} 💬\n\n'
+            f'📝 Confession: {preview}\n\n'
+            'Drop your anonymous comment below.\n\n'
+            'Example: This shit really hit home!\n\n'
+            'Your comment will be reviewed before exploding live.',
+            reply_markup=reply_markup
+        )
+        return ASK_COMMENT
     elif query.data.startswith('view_comments_'):
         # Extract confession ID from callback data
         try:
@@ -1119,28 +1210,24 @@ All interactions are through buttons - no commands needed! 🎯
             await query.answer("Confession not found")
             return MAIN_MENU
         
-        # Load approved comments for this confession
         comments = load_comments()
-        conf_comments = [c for c in comments if c['confession_id'] == conf_id and c.get('approved', False)]
-        
+        conf_comments = [c for c in comments if c.get('conf_id', c.get('confession_id')) == conf_id and c.get('approved', True)]
         if not conf_comments:
             message_text = f'💬 Comments on Confession #{conf_id:03d} 💬\n\n'
             message_text += '📝 Confession:\n' + conf['text'] + '\n\n'
-            message_text += '❓ No comments yet. Be the first to drop some wisdom!'
+            message_text += '❓ No comments yet. Be the first to drop some wisdom!\n\n'
         else:
             message_text = f'💬 Comments on Confession #{conf_id:03d} 💬\n\n'
             message_text += '📝 Confession:\n' + conf['text'] + '\n\n'
             message_text += '💭 Community Chaos:\n\n'
-            
             for comment in conf_comments:
                 message_text += f'#{comment["id"]:03d}: {comment["text"]}\n\n'
-        
         keyboard = [
             [InlineKeyboardButton(f'💭 Drop Your Comment', callback_data=f'comment_on_{conf_id}')],
+            [InlineKeyboardButton('🔄 Refresh Comments', callback_data=f'view_comments_{conf_id}')],
             [InlineKeyboardButton("⬅️ Back to Wild Confessions", callback_data='comment_help')]
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        
         await query.edit_message_text(message_text, reply_markup=reply_markup)
         return MAIN_MENU
     elif query.data == 'safety':
@@ -1209,6 +1296,7 @@ Stay wild and be decent! 🙏
             chat_id=query.message.chat_id,
             text=intro_text,
             reply_markup=reply_markup
+        )
         return MAIN_MENU
     elif query.data.startswith('approve_') or query.data.startswith('reject_') or query.data.startswith('edit_'):
         # Admin actions
@@ -1279,7 +1367,7 @@ Stay wild and be decent! 🙏
                 if action == 'approve':
                     try:
                         if CHANNEL_ID:
-                            keyboard = [[InlineKeyboardButton("💭 Comment", url=f"https://t.me/{BOT_USERNAME}?start=comment_{conf_id}")]]
+                            keyboard = [[InlineKeyboardButton("💭 Comment", url=f"https://t.me/{BOT_USERNAME}?start=view_comments_{conf_id}")]]
                             reply_markup = InlineKeyboardMarkup(keyboard)
                             message = await context.bot.send_message(
                                 chat_id=CHANNEL_ID, 
@@ -1385,6 +1473,7 @@ Stay wild and be decent! 🙏
             'Just type your message and send it to us!\n'
             '👀 Your message will be reviewed by our admin team.',
             reply_markup=reply_markup
+        )
         # Set user state for contact
         context.user_data['awaiting_contact'] = True
         return CONTACT_STATE
@@ -1400,6 +1489,7 @@ Stay wild and be decent! 🙏
             '🐛 Found any issues?\n\n'
             'Just type your message and send it to us! ✨',
             reply_markup=reply_markup
+        )
         # Set user state for feedback
         context.user_data['awaiting_feedback'] = True
         return FEEDBACK_STATE
@@ -1431,6 +1521,7 @@ Stay wild and be decent! 🙏
             f'👤 From: {user_info}\n'
             f'💭 Original: {contact["text"]}\n\n'
             f'📝 Type your reply message and send it:'
+        )
         
         keyboard = [[InlineKeyboardButton("⬅️ Back", callback_data='back_to_menu')]]
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -1440,6 +1531,7 @@ Stay wild and be decent! 🙏
             f'💭 Original: {contact["text"]}\n\n'
             f'📝 Type your reply message and send it:',
             reply_markup=reply_markup
+        )
         
         # Set state for receiving admin reply
         print("State set to ADMIN_REPLY_STATE")
@@ -1622,6 +1714,7 @@ async def main():
             port=int(os.environ.get('PORT', 5000)),
             url_path="webhook",
             webhook_url=WEBHOOK_URL
+        )
         print("✅ Bot webhook is now running! Press Ctrl+C to stop.")
         try:
             # Keep the bot running

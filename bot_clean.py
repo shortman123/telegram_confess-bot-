@@ -250,7 +250,7 @@ async def approve(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if conf['id'] == conf_id:
             # Post to channel
             if CHANNEL_ID:
-                message = await context.bot.send_message(chat_id=CHANNEL_ID, text=f'🎭 **Anonymous Confession #{conf_id:03d}** 🎭\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📖 **Story:**\n{conf["text"]}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n💭 **Share Your Thoughts:**\n💬 [Comment](https://t.me/{BOT_USERNAME}?start=comment_{conf_id})\n\n🌟 **Help others feel less alone!**\n\n#Confession #{conf_id} #Anonymous #Support #Community')
+                message = await context.bot.send_message(chat_id=CHANNEL_ID, text=f'🎭 **Anonymous Confession #{conf_id:03d}** 🎭\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📖 **Story:**\n{conf["text"]}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n💭 **Share Your Thoughts:**\n💬 [Comment](https://t.me/{BOT_USERNAME}?start=view_comments_{conf_id})\n\n🌟 **Help others feel less alone!**\n\n#Confession #{conf_id} #Anonymous #Support #Community')
                 message_id = message.message_id
                 # Save to approved
                 approved = load_approved()
@@ -762,7 +762,7 @@ For urgent matters, message the bot admin directly.
             if conf['id'] == conf_id:
                 if action == 'approve':
                     if CHANNEL_ID:
-                        message = await context.bot.send_message(chat_id=CHANNEL_ID, text=f'🎭 **Anonymous Confession #{conf_id:03d}** 🎭\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📖 **Story:**\n{conf["text"]}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n💭 **Share Your Thoughts:**\n💬 [Comment](https://t.me/{BOT_USERNAME}?start=comment_{conf_id})\n\n🌟 **Help others feel less alone!**\n\n#Confession #{conf_id} #Anonymous #Support #Community')
+                        message = await context.bot.send_message(chat_id=CHANNEL_ID, text=f'🎭 **Anonymous Confession #{conf_id:03d}** 🎭\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📖 **Story:**\n{conf["text"]}\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n💭 **Share Your Thoughts:**\n💬 [Comment](https://t.me/{BOT_USERNAME}?start=view_comments_{conf_id})\n\n🌟 **Help others feel less alone!**\n\n#Confession #{conf_id} #Anonymous #Support #Community')
                         message_id = message.message_id
                         # Save to approved
                         approved = load_approved()
