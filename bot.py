@@ -273,13 +273,13 @@ async def receive_confession(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 text=f'📝 New Confession #{confession["id"]:03d} 📝\n\n{user_info}\n\n💌 Confession:\n{update.message.text}',
                 reply_markup=reply_markup
             )
-    return ConversationHandler.END
+    return MAIN_MENU
 
 async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conf_id = context.user_data.get('comment_conf_id')
     if not conf_id:
         await update.message.reply_text('❓ No active comment session. Use /start to begin.')
-        return ConversationHandler.END
+        return MAIN_MENU
     
     comment_text = update.message.text.strip()
     if not comment_text:
@@ -290,7 +290,7 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     approved = load_approved()
     if not any(conf['id'] == conf_id for conf in approved):
         await update.message.reply_text('❓ Confession not found.')
-        return ConversationHandler.END
+        return MAIN_MENU
     
     # Save comment
     comments = load_comments()
@@ -300,7 +300,7 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'conf_id': conf_id,
         'user_id': update.message.from_user.id,
         'text': comment_text,
-        'approved': False,
+        'approved': True,  # Auto-approve comments
         'timestamp': update.message.date.isoformat()
     })
     save_comments(comments)
@@ -308,8 +308,8 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         '💬 **Holy Shit, Thanks for Your Support!** 💬\n\n'
         '🙏 **Your comment is pure fire**\n\n'
-        '👀 Our admin will give it a quick wild glance\n'
-        '📢 Once approved, it will explode as a reply to help others\n\n'
+        '✅ Your comment is live instantly\n'
+        '📢 Your comment is now live and helping others\n\n'
         '🌟 **Your energy makes our community fucking awesome**\n\n'
         '💝 **Want to support more crazy stories?** Visit our channel anytime\n\n'
         '**Thank you for being part of the chaos** ✨',
@@ -343,12 +343,12 @@ async def receive_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Clear user data
     context.user_data.clear()
-    return ConversationHandler.END
+    return MAIN_MENU
 
 async def receive_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not context.user_data.get('awaiting_feedback'):
         await update.message.reply_text('❓ No active feedback session. Use the menu to send feedback.')
-        return ConversationHandler.END
+        return MAIN_MENU
     
     feedback_text = update.message.text.strip()
     if not feedback_text:
@@ -402,13 +402,13 @@ async def receive_feedback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Clear user data
     context.user_data.clear()
-    return ConversationHandler.END
+    return MAIN_MENU
 
 async def receive_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("Received contact message")
     if not context.user_data.get('awaiting_contact'):
         await update.message.reply_text('❓ No active contact session. Use the menu to contact admin.')
-        return ConversationHandler.END
+        return MAIN_MENU
     
     contact_text = update.message.text.strip()
     if not contact_text:
@@ -466,17 +466,17 @@ async def receive_contact(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     # Clear user data
     context.user_data.clear()
-    return ConversationHandler.END
+    return MAIN_MENU
 
 async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print("Admin sending reply")
     if update.message.from_user.id not in ADMINS:
         await update.message.reply_text('❌ This function is for admins only!')
-        return ConversationHandler.END
+        return MAIN_MENU
     
     if not context.user_data.get('replying_to_contact'):
         await update.message.reply_text('❓ No active reply session. Use /view_contacts to start replying.')
-        return ConversationHandler.END
+        return MAIN_MENU
     
     contact_id = context.user_data['replying_to_contact']
     reply_text = update.message.text.strip()
@@ -491,7 +491,7 @@ async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not contact:
         await update.message.reply_text('❌ Contact not found.')
         context.user_data.clear()
-        return ConversationHandler.END
+        return MAIN_MENU
     
     # Send reply to user
     try:
@@ -519,7 +519,7 @@ async def receive_admin_reply(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     # Clear user data
     context.user_data.clear()
-    return ConversationHandler.END
+    return MAIN_MENU
 
 async def pending(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.from_user.id not in ADMINS:
@@ -643,7 +643,7 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
         'conf_id': conf_id,
         'user_id': update.message.from_user.id,
         'text': comment_text,
-        'approved': False,
+        'approved': True,  # Auto-approve comments
         'timestamp': update.message.date.isoformat()
     })
     save_comments(comments)
@@ -651,8 +651,8 @@ async def comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         '💬 **Holy Shit, Thanks for Your Support!** 💬\n\n'
         '🙏 **Your comment is pure fire**\n\n'
-        '👀 Our admin will give it a quick wild glance\n'
-        '📢 Once approved, it will explode as a reply to help others\n\n'
+        '✅ Your comment is live instantly\n'
+        '📢 Your comment is now live and helping others\n\n'
         '🌟 **Your energy makes our community fucking awesome**\n\n'
         '💝 **Want to support more crazy stories?** Visit our channel anytime\n\n'
         '**Thank you for being part of the chaos** ✨',
